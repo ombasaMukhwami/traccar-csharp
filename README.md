@@ -1,0 +1,1 @@
+[![.NET]([https://github.com/dalyntechnologies/MessageBroker/actions/workflows/dotnet.yml](https://github.com/ombasaMukhwami/traccar-csharp/blob/main/.github/workflows/dotnet.yml)/badge.svg?branch=master)](https://github.com/ombasaMukhwami/traccar-csharp/blob/main/.github/workflows/dotnet.yml)
