@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
+using Traccar.Protocols.Forward;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -11,7 +12,8 @@ public sealed class MeiligaoProtocol : BaseProtocol
 {
     public MeiligaoProtocol(
         IConfiguration configuration, ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory)
+        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IPositionForwarder? positionForwarder = null)
         : base(configuration, loggerFactory)
     {
         SetSupportedDataCommands(
@@ -32,6 +34,7 @@ public sealed class MeiligaoProtocol : BaseProtocol
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new MeiligaoProtocolEncoder(configuration, dbContextFactory, loggerFactory.CreateLogger<MeiligaoProtocolEncoder>()));
             pipeline.AddLast(new MeiligaoProtocolDecoder(connectionManager, loggerFactory.CreateLogger<MeiligaoProtocolDecoder>()));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
 
@@ -42,6 +45,7 @@ public sealed class MeiligaoProtocol : BaseProtocol
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new MeiligaoProtocolEncoder(configuration, dbContextFactory, loggerFactory.CreateLogger<MeiligaoProtocolEncoder>()));
             pipeline.AddLast(new MeiligaoProtocolDecoder(connectionManager, loggerFactory.CreateLogger<MeiligaoProtocolDecoder>()));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
+using Traccar.Protocols.Forward;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -11,7 +12,8 @@ public sealed class Gt06Protocol : BaseProtocol
 {
     public Gt06Protocol(
         IConfiguration configuration, ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory)
+        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IPositionForwarder? positionForwarder = null)
         : base(configuration, loggerFactory)
     {
         SetSupportedDataCommands(Command.TypeEngineStop, Command.TypeEngineResume, Command.TypeCustom);
@@ -23,6 +25,7 @@ public sealed class Gt06Protocol : BaseProtocol
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new Gt06ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<Gt06ProtocolEncoder>()));
             pipeline.AddLast(new Gt06ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<Gt06ProtocolDecoder>()));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }

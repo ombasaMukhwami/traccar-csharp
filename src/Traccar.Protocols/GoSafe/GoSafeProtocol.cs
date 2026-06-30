@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Traccar.Protocols.Forward;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -10,7 +11,8 @@ public sealed class GoSafeProtocol : BaseProtocol
 {
     public GoSafeProtocol(
         IConfiguration configuration, ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory)
+        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IPositionForwarder? positionForwarder = null)
         : base(configuration, loggerFactory)
     {
         // GoSafe has no protocol encoder in Java either - no data commands are supported.
@@ -20,6 +22,7 @@ public sealed class GoSafeProtocol : BaseProtocol
             pipeline.AddLast(new ConnectionTrackingHandler(connectionManager, loggerFactory.CreateLogger<ConnectionTrackingHandler>()));
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new GoSafeProtocolDecoder(connectionManager, loggerFactory.CreateLogger<GoSafeProtocolDecoder>()));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
 
@@ -29,6 +32,7 @@ public sealed class GoSafeProtocol : BaseProtocol
         {
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new GoSafeProtocolDecoder(connectionManager, loggerFactory.CreateLogger<GoSafeProtocolDecoder>()));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }

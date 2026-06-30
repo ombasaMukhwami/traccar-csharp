@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Traccar.Protocols.Forward;
 using Traccar.Protocols.Media;
 using Traccar.Protocols.Session;
 
@@ -7,6 +8,26 @@ namespace Traccar.Protocols;
 
 public static class DependencyInjection
 {
+    /// <summary>
+    /// Registers the position forwarder selected by Forward:Type, mirroring Java's
+    /// MainModule.providePositionForwarder - only one forwarder is active at a time, and none is
+    /// registered (PositionForwardingHandler becomes a no-op) if Forward:Type is unset.
+    /// </summary>
+    public static IServiceCollection AddTraccarPositionForwarding(this IServiceCollection services, IConfiguration configuration)
+    {
+        switch (configuration["Forward:Type"])
+        {
+            case "kafka":
+                services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderKafka(configuration));
+                break;
+            case "rabbitmq":
+                services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderRabbitMq(configuration));
+                break;
+        }
+
+        return services;
+    }
+
     /// <summary>
     /// Registers the connection manager and every supported device protocol that is both allowed by
     /// the optional Protocols:Enable allow-list and has a configured (and positive) port. Mirrors
@@ -20,6 +41,7 @@ public static class DependencyInjection
         services.AddSingleton<ConnectionManager>();
         services.AddSingleton<DeviceLookupService>();
         services.AddSingleton<VideoStreamManager>();
+        services.AddTraccarPositionForwarding(configuration);
 
         HashSet<string>? enabledProtocols = null;
         var enableList = configuration["Protocols:Enable"];

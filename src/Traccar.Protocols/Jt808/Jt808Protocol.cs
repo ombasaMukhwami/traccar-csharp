@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
+using Traccar.Protocols.Forward;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -11,7 +12,8 @@ public sealed class Jt808Protocol : BaseProtocol
 {
     public Jt808Protocol(
         IConfiguration configuration, ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory)
+        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IPositionForwarder? positionForwarder = null)
         : base(configuration, loggerFactory)
     {
         SetSupportedDataCommands(
@@ -33,6 +35,7 @@ public sealed class Jt808Protocol : BaseProtocol
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new Jt808ProtocolEncoder(configuration, dbContextFactory, loggerFactory.CreateLogger<Jt808ProtocolEncoder>()));
             pipeline.AddLast(new Jt808ProtocolDecoder(connectionManager, configuration, loggerFactory.CreateLogger<Jt808ProtocolDecoder>()));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }

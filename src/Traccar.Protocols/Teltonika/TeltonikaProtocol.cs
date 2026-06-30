@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
+using Traccar.Protocols.Forward;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -11,7 +12,8 @@ public sealed class TeltonikaProtocol : BaseProtocol
 {
     public TeltonikaProtocol(
         IConfiguration configuration, ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory)
+        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IPositionForwarder? positionForwarder = null)
         : base(configuration, loggerFactory)
     {
         SetSupportedDataCommands(Command.TypeCustom, Command.TypeEngineStop, Command.TypeEngineResume);
@@ -24,6 +26,7 @@ public sealed class TeltonikaProtocol : BaseProtocol
             pipeline.AddLast(new TeltonikaProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<TeltonikaProtocolEncoder>()));
             pipeline.AddLast(new TeltonikaProtocolDecoder(
                 connectionManager, loggerFactory.CreateLogger<TeltonikaProtocolDecoder>(), configuration, connectionless: false));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
 
@@ -35,6 +38,7 @@ public sealed class TeltonikaProtocol : BaseProtocol
             pipeline.AddLast(new TeltonikaProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<TeltonikaProtocolEncoder>()));
             pipeline.AddLast(new TeltonikaProtocolDecoder(
                 connectionManager, loggerFactory.CreateLogger<TeltonikaProtocolDecoder>(), configuration, connectionless: true));
+            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
             pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }
