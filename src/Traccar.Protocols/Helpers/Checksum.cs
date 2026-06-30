@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Traccar.Protocols.Helpers;
 
 public static class Checksum
@@ -180,6 +182,16 @@ public static class Checksum
             crc = Reverse(crc, 32);
         }
         return crc ^ algorithm.XorOut;
+    }
+
+    public static string Sum(string msg)
+    {
+        byte checksum = 0;
+        foreach (var b in Encoding.ASCII.GetBytes(msg))
+        {
+            checksum = unchecked((byte)(checksum + b));
+        }
+        return checksum.ToString("X2");
     }
 
     public static long Luhn(long imei)

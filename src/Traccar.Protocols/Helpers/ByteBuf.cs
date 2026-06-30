@@ -46,6 +46,10 @@ public readonly struct ByteBuf(IByteBuffer buffer)
 
     public int GetUnsignedShort(int index) => Inner.GetUnsignedShort(index);
 
+    public short ReadShortLE() => Inner.ReadShortLE();
+
+    public int ReadUnsignedShortLE() => Inner.ReadUnsignedShortLE();
+
     // 24-bit
     public int ReadMedium() => Inner.ReadMedium();
 
@@ -63,6 +67,10 @@ public readonly struct ByteBuf(IByteBuffer buffer)
     public int GetInt(int index) => Inner.GetInt(index);
 
     public long GetUnsignedInt(int index) => Inner.GetUnsignedInt(index);
+
+    public int ReadIntLE() => Inner.ReadIntLE();
+
+    public long ReadUnsignedIntLE() => Inner.ReadUnsignedIntLE();
 
     // 64-bit
     public long ReadLong() => Inner.ReadLong();

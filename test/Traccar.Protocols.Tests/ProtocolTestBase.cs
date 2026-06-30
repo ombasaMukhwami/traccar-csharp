@@ -122,6 +122,19 @@ public abstract class ProtocolTestBase
         Assert.NotEmpty(position.Attributes);
     }
 
+    protected static void VerifyPositions(
+        ChannelHandlerAdapter decoder, IByteBuffer input, DateTime expectedTime, bool expectedValid,
+        double expectedLatitude, double expectedLongitude)
+    {
+        var positions = DecodeAll(decoder, input);
+        Assert.NotEmpty(positions);
+        var position = positions[0];
+        Assert.Equal(expectedTime, position.FixTime);
+        Assert.Equal(expectedValid, position.Valid);
+        Assert.Equal(expectedLatitude, position.Latitude, 0.001);
+        Assert.Equal(expectedLongitude, position.Longitude, 0.001);
+    }
+
     protected static void VerifyPositions(ChannelHandlerAdapter decoder, IByteBuffer input)
     {
         var positions = DecodeAll(decoder, input);

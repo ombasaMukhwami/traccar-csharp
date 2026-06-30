@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,9 +13,8 @@ using Traccar.Protocols.Session;
 namespace Traccar.Protocols.Teltonika;
 
 /// <summary>
-/// Covers Teltonika's standard AVL protocol over TCP and UDP (codecs 8, 8 extended, 13, 16, and the
-/// older GH3000 codec). The serial/command codec (12, used for two-way commands and photo transfer)
-/// is not decoded. One instance is registered per transport, mirroring Java's
+/// Covers Teltonika's standard AVL protocol over TCP and UDP (codecs 8, 8 extended, 12, 13, 16, and
+/// the older GH3000 codec). One instance is registered per transport, mirroring Java's
 /// TeltonikaProtocolDecoder(Protocol, boolean connectionless).
 /// </summary>
 public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
@@ -37,6 +37,8 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
     public const int Codec12 = 0x0C;
     public const int Codec13 = 0x0D;
     public const int Codec16 = 0x10;
+
+    private const int ImagePacketMax = 2048;
 
     private static readonly Dictionary<int, List<(Func<string?, bool> Predicate, Action<Position, ByteBuf> Handler)>> Parameters = new();
 
@@ -457,6 +459,108 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
                 {
                     position.Set(Position.KeyDtcs, buf.ReadSlice(length).ToString(Encoding.ASCII).Replace(',', ' '));
                 }
+                else if (id == 385)
+                {
+                    var data = new ByteBuf(buf.ReadSlice(length));
+                    data.ReadUnsignedByte(); // data part
+                    var index = 1;
+                    while (data.IsReadable())
+                    {
+                        var flags = data.ReadUnsignedByte();
+                        if (BitUtil.From(flags, 4) > 0)
+                        {
+                            position.Set("beacon" + index + "Uuid", ByteBufferUtil.HexDump(data.ReadSlice(16)));
+                            position.Set("beacon" + index + "Major", data.ReadUnsignedShort());
+                            position.Set("beacon" + index + "Minor", data.ReadUnsignedShort());
+                        }
+                        else
+                        {
+                            position.Set("beacon" + index + "Namespace", ByteBufferUtil.HexDump(data.ReadSlice(10)));
+                            position.Set("beacon" + index + "Instance", ByteBufferUtil.HexDump(data.ReadSlice(6)));
+                        }
+                        position.Set("beacon" + index + "Rssi", (int)data.ReadByte());
+                        if (BitUtil.Check(flags, 1))
+                        {
+                            position.Set("beacon" + index + "Battery", data.ReadUnsignedShort() / 100.0);
+                        }
+                        if (BitUtil.Check(flags, 2))
+                        {
+                            position.Set("beacon" + index + "Temp", data.ReadUnsignedShort());
+                        }
+                        index += 1;
+                    }
+                }
+                else if (id is 548 or 10828 or 10829 or 10831 or 11317)
+                {
+                    var data = new ByteBuf(buf.ReadSlice(length));
+                    data.ReadUnsignedByte(); // header
+                    for (var i = 1; data.IsReadable(); i++)
+                    {
+                        var beacon = new ByteBuf(data.ReadSlice(data.ReadUnsignedByte()));
+                        while (beacon.IsReadable())
+                        {
+                            var parameterId = beacon.ReadUnsignedByte();
+                            var parameterLength = beacon.ReadUnsignedByte();
+                            switch (parameterId)
+                            {
+                                case 0:
+                                    position.Set("tag" + i + "Rssi", (int)beacon.ReadByte());
+                                    break;
+                                case 1:
+                                    position.Set("tag" + i + "Id", ByteBufferUtil.HexDump(beacon.ReadSlice(parameterLength)));
+                                    break;
+                                case 2:
+                                    var beaconData = new ByteBuf(beacon.ReadSlice(parameterLength));
+                                    var flag = beaconData.ReadUnsignedByte();
+                                    if (BitUtil.Check(flag, 6))
+                                    {
+                                        position.Set("tag" + i + "LowBattery", true);
+                                    }
+                                    if (BitUtil.Check(flag, 7))
+                                    {
+                                        position.Set("tag" + i + "Voltage", beaconData.ReadUnsignedByte() * 10 + 2000);
+                                    }
+                                    break;
+                                case 5:
+                                    position.Set("tag" + i + "Name", beacon.ReadString(parameterLength, Encoding.UTF8));
+                                    break;
+                                case 6:
+                                    position.Set("tag" + i + "Temp", beacon.ReadShort());
+                                    break;
+                                case 7:
+                                    position.Set("tag" + i + "Humidity", beacon.ReadUnsignedByte());
+                                    break;
+                                case 8:
+                                    position.Set("tag" + i + "Magnet", beacon.ReadUnsignedByte() > 0);
+                                    break;
+                                case 9:
+                                    position.Set("tag" + i + "Motion", beacon.ReadUnsignedByte() > 0);
+                                    break;
+                                case 10:
+                                    position.Set("tag" + i + "MotionCount", beacon.ReadUnsignedShort());
+                                    break;
+                                case 11:
+                                    position.Set("tag" + i + "Pitch", (int)beacon.ReadByte());
+                                    break;
+                                case 12:
+                                    position.Set("tag" + i + "AngleRoll", (int)beacon.ReadShort());
+                                    break;
+                                case 13:
+                                    position.Set("tag" + i + "LowBattery", beacon.ReadUnsignedByte());
+                                    break;
+                                case 14:
+                                    position.Set("tag" + i + "Battery", beacon.ReadUnsignedShort());
+                                    break;
+                                case 15:
+                                    position.Set("tag" + i + "Mac", ByteBufferUtil.HexDump(beacon.ReadSlice(6)));
+                                    break;
+                                default:
+                                    beacon.SkipBytes(parameterLength);
+                                    break;
+                            }
+                        }
+                    }
+                }
                 else
                 {
                     position.Set(Position.PrefixIo + id, ByteBufferUtil.HexDump(buf.ReadSlice(length)));
@@ -486,6 +590,97 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
         }
     }
 
+    private static void SendImageRequest(IChannel channel, EndPoint? remoteAddress, long id, int offset, int size)
+    {
+        var response = Unpooled.Buffer();
+        response.WriteInt(0);
+        response.WriteShort(0);
+        response.WriteShort(19); // length
+        response.WriteByte(Codec12);
+        response.WriteByte(1); // nod
+        response.WriteByte(0x0D); // camera
+        response.WriteInt(11); // payload length
+        response.WriteByte(2); // command
+        response.WriteInt((int)id);
+        response.WriteInt(offset);
+        response.WriteShort(size);
+        response.WriteByte(1); // nod
+        response.WriteShort(0);
+
+        var checksumBytes = new byte[19];
+        response.GetBytes(8, checksumBytes);
+        response.WriteShort(Checksum.Crc16(Checksum.Crc16Ibm, checksumBytes));
+
+        WriteResponse(channel, remoteAddress, response);
+    }
+
+    private void DecodeSerial(
+        IChannel channel, EndPoint? remoteAddress, DeviceSession deviceSession, Position position, ByteBuf buf)
+    {
+        GetLastLocation(position, null);
+
+        var type = buf.ReadUnsignedByte();
+        if (type == 0x0D)
+        {
+            buf.ReadInt(); // length
+            var subtype = buf.ReadUnsignedByte();
+            if (subtype == 0x01)
+            {
+                var photoId = buf.ReadUnsignedInt();
+                var photo = NewMediaBuffer(buf.ReadInt());
+                SendImageRequest(channel, remoteAddress, photoId, 0, Math.Min(ImagePacketMax, photo.Capacity));
+            }
+            else if (subtype == 0x02)
+            {
+                var photoId = buf.ReadUnsignedInt();
+                buf.ReadInt(); // offset
+                var photo = GetMediaBuffer()!;
+                var chunk = new byte[buf.ReadUnsignedShort()];
+                buf.ReadBytes(chunk);
+                photo.WriteBytes(chunk);
+                if (photo.WritableBytes > 0)
+                {
+                    SendImageRequest(
+                        channel, remoteAddress, photoId, photo.WriterIndex, Math.Min(ImagePacketMax, photo.WritableBytes));
+                }
+                else
+                {
+                    position.Set(Position.KeyImage, WriteMediaFile(deviceSession.UniqueId, "jpg"));
+                }
+            }
+        }
+        else
+        {
+            position.Set(Position.KeyType, type);
+
+            var length = buf.ReadInt();
+            if (BufferUtil.IsPrintable(buf, length))
+            {
+                var data = JavaString.Trim(buf.ReadString(length, Encoding.ASCII));
+                if (data.StartsWith("UUUUww") && data.EndsWith("SSS"))
+                {
+                    var values = JavaString.Split(data[6..^4], ';');
+                    for (var i = 0; i < 8; i++)
+                    {
+                        position.Set("axle" + (i + 1), double.Parse(values[i], CultureInfo.InvariantCulture));
+                    }
+                    position.Set("loadTruck", double.Parse(values[8], CultureInfo.InvariantCulture));
+                    position.Set("loadTrailer", double.Parse(values[9], CultureInfo.InvariantCulture));
+                    position.Set("totalTruck", double.Parse(values[10], CultureInfo.InvariantCulture));
+                    position.Set("totalTrailer", double.Parse(values[11], CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    position.Set(Position.KeyResult, data);
+                }
+            }
+            else
+            {
+                position.Set(Position.KeyResult, ByteBufferUtil.HexDump(buf.ReadSlice(length)));
+            }
+        }
+    }
+
     private List<Position>? ParseData(IChannel channel, EndPoint? remoteAddress, ByteBuf buf, int locationPacketId, params string?[] imei)
     {
         var positions = new List<Position>();
@@ -503,8 +698,6 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
         {
             return null;
         }
-
-        var model = deviceSession.Model;
 
         for (var i = 0; i < count; i++)
         {
@@ -534,10 +727,10 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
                     }
                     break;
                 case Codec12:
-                    // Serial/command codec (photo transfer, two-way commands) is not decoded.
-                    return positions.Count > 0 ? positions : null;
+                    DecodeSerial(channel, remoteAddress, deviceSession, position, buf);
+                    break;
                 default:
-                    DecodeLocation(position, buf, codec, model);
+                    DecodeLocation(position, buf, codec, GetDeviceModel(deviceSession));
                     break;
             }
 

@@ -17,6 +17,13 @@ public enum CoordinateFormat
     HemDegMinHem,
 }
 
+public enum DateTimeFormat
+{
+    YmdHms,
+    HmsDmy,
+    DmyHms,
+}
+
 public sealed class Parser
 {
     private readonly Match match;
@@ -115,6 +122,47 @@ public sealed class Parser
         var hour = NextInt(0);
         var minute = NextInt(0);
         var second = NextInt(0);
+        return new DateBuilder().SetDate(year, month, day).SetTime(hour, minute, second).GetDate();
+    }
+
+    public DateTime NextDateTime(DateTimeFormat format)
+    {
+        int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
+
+        switch (format)
+        {
+            case DateTimeFormat.HmsDmy:
+                hour = NextInt(0);
+                minute = NextInt(0);
+                second = NextInt(0);
+                day = NextInt(0);
+                month = NextInt(0);
+                year = NextInt(0);
+                break;
+            case DateTimeFormat.DmyHms:
+                day = NextInt(0);
+                month = NextInt(0);
+                year = NextInt(0);
+                hour = NextInt(0);
+                minute = NextInt(0);
+                second = NextInt(0);
+                break;
+            case DateTimeFormat.YmdHms:
+            default:
+                year = NextInt(0);
+                month = NextInt(0);
+                day = NextInt(0);
+                hour = NextInt(0);
+                minute = NextInt(0);
+                second = NextInt(0);
+                break;
+        }
+
+        if (year is >= 0 and < 100)
+        {
+            year += 2000;
+        }
+
         return new DateBuilder().SetDate(year, month, day).SetTime(hour, minute, second).GetDate();
     }
 

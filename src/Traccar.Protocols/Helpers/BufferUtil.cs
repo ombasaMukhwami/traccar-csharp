@@ -26,4 +26,12 @@ public static class BufferUtil
         }
         return true;
     }
+
+    /// <summary>Reads a 32-bit sign-magnitude integer (bit 31 = sign, bits 0-30 = magnitude).</summary>
+    public static int ReadSignedMagnitudeInt(ByteBuf buffer)
+    {
+        var value = buffer.ReadUnsignedInt();
+        var result = (int)BitUtil.To(value, 31);
+        return BitUtil.Check(value, 31) ? -result : result;
+    }
 }

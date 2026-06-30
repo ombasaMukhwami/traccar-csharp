@@ -77,6 +77,20 @@ public abstract class BaseProtocolDecoder(
         => ConnectionManager.GetDeviceSessionAsync(channel, remoteAddress, uniqueIds).GetAwaiter().GetResult();
 
     /// <summary>
+    /// Reports this server's own address (as seen by the device's connection), formatted with a
+    /// custom delimiter. Simplified from Java's version, which also accepts a Server:Protocol-prefixed
+    /// config override - dropped here since no such config exists in this port.
+    /// </summary>
+    protected static string? GetServer(IChannel? channel, char delimiter)
+    {
+        if (channel?.LocalAddress is IPEndPoint address)
+        {
+            return $"{address.Address}:{address.Port}".Replace(':', delimiter);
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Writes a response back to the device. UDP sockets are unconnected (shared by every sender),
     /// so a reply must be addressed via a DatagramPacket to the sender of the packet it answers; TCP
     /// channels have a single implicit peer and can be written to directly. Mirrors Java's
@@ -117,6 +131,40 @@ public abstract class BaseProtocolDecoder(
             return TimeZoneInfo.CreateCustomTimeZone(defaultTimeZone, TimeSpan.FromHours(sign * hours), defaultTimeZone, defaultTimeZone);
         }
         return TimeZoneInfo.Utc;
+    }
+
+    private IByteBuffer? mediaBuffer;
+
+    protected IByteBuffer? GetMediaBuffer() => mediaBuffer;
+
+    protected IByteBuffer NewMediaBuffer(int size = 0)
+    {
+        ReleaseMediaBuffer();
+        mediaBuffer = Unpooled.Buffer(size);
+        return mediaBuffer;
+    }
+
+    private void ReleaseMediaBuffer()
+    {
+        mediaBuffer?.Release();
+        mediaBuffer = null;
+    }
+
+    public override void ChannelInactive(IChannelHandlerContext context)
+    {
+        ReleaseMediaBuffer();
+        context.FireChannelInactive();
+    }
+
+    /// <summary>
+    /// Persists the accumulated media buffer to disk and returns the stored file name. Media storage
+    /// isn't wired up in this port (no Server:MediaPath setting) - matches Java's MediaManager.writeFile
+    /// behavior when Keys.MEDIA_PATH is unset, which no-ops and returns null.
+    /// </summary>
+    protected string? WriteMediaFile(string uniqueId, string extension)
+    {
+        ReleaseMediaBuffer();
+        return null;
     }
 
     protected void GetLastLocation(Position position, DateTime? deviceTime)

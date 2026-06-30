@@ -15,6 +15,8 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
     public DbSet<Event> Events => Set<Event>();
 
+    public DbSet<Command> Commands => Set<Command>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Device>(entity =>
@@ -58,6 +60,14 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.HasIndex(e => new { e.DeviceId, e.EventTime });
+        });
+
+        modelBuilder.Entity<Command>(entity =>
+        {
+            entity.ToTable("tc_commands");
+            entity.Property(e => e.Attributes)
+                .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
+            entity.HasIndex(e => e.DeviceId);
         });
     }
 }

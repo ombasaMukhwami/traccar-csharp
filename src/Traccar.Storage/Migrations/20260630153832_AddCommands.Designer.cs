@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Traccar.Storage;
 
@@ -10,9 +11,11 @@ using Traccar.Storage;
 namespace Traccar.Storage.Migrations
 {
     [DbContext(typeof(TraccarDbContext))]
-    partial class TraccarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630153832_AddCommands")]
+    partial class AddCommands
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
