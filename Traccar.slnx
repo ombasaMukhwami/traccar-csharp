@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Traccar.Model/Traccar.Model.csproj" />
+    <Project Path="src/Traccar.Protocols/Traccar.Protocols.csproj" />
+    <Project Path="src/Traccar.Server/Traccar.Server.csproj" />
+    <Project Path="src/Traccar.Storage/Traccar.Storage.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Traccar.Protocols.Tests/Traccar.Protocols.Tests.csproj" />
+  </Folder>
+</Solution>
