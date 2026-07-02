@@ -56,25 +56,25 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
     private static readonly HashSet<string> AlarmModelsMovement = ["AL300", "GL100"];
     private static readonly HashSet<string> JcModels = ["JC371", "JC181", "JC182", "JC450", "JC451"];
 
-    private int delimiter = 0x7e;
-    private int? protocolVersion;
+    private int _delimiter = 0x7e;
+    private int? _protocolVersion;
 
-    public int? ProtocolVersion => protocolVersion;
+    public int? ProtocolVersion => _protocolVersion;
 
     public IByteBuffer FormatMessage(int type, IByteBuffer id, bool shortIndex, IByteBuffer data)
     {
         var buf = Unpooled.Buffer();
-        buf.WriteByte(delimiter);
+        buf.WriteByte(_delimiter);
         buf.WriteShort(type);
         var attribute = data.ReadableBytes;
-        if (protocolVersion != null)
+        if (_protocolVersion != null)
         {
             attribute |= 0x4000;
         }
         buf.WriteShort(attribute);
-        if (protocolVersion != null)
+        if (_protocolVersion != null)
         {
-            buf.WriteByte(protocolVersion.Value);
+            buf.WriteByte(_protocolVersion.Value);
         }
         buf.WriteBytes(id, id.ReaderIndex, id.ReadableBytes);
         if (shortIndex)
@@ -90,7 +90,7 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
         var checksumBytes = new byte[buf.ReadableBytes - 1];
         buf.GetBytes(1, checksumBytes);
         buf.WriteByte(Checksum.Xor(checksumBytes));
-        buf.WriteByte(delimiter);
+        buf.WriteByte(_delimiter);
         return buf;
     }
 
@@ -330,14 +330,14 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
             }
         }
 
-        delimiter = buf.ReadByte();
+        _delimiter = buf.ReadByte();
         var type = buf.ReadUnsignedShort();
         var attribute = buf.ReadUnsignedShort();
 
         var bodyLength = BitUtil.To(attribute, 10);
 
-        protocolVersion = BitUtil.Check(attribute, 14) ? buf.ReadByte() : null;
-        var id = buf.ReadSlice(protocolVersion != null ? 10 : (delimiter == 0xe7 ? 7 : 6));
+        _protocolVersion = BitUtil.Check(attribute, 14) ? buf.ReadByte() : null;
+        var id = buf.ReadSlice(_protocolVersion != null ? 10 : (_delimiter == 0xe7 ? 7 : 6));
 
         int index;
         if (type == MsgLocationReport2 || type == MsgLocationReportBlind)

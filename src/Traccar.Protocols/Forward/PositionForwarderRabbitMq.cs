@@ -10,20 +10,20 @@ public sealed class PositionForwarderRabbitMq : IPositionForwarder, IAsyncDispos
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private readonly string exchange;
-    private readonly string routingKey;
-    private readonly IConnection connection;
-    private readonly IChannel channel;
+    private readonly string _exchange;
+    private readonly string _routingKey;
+    private readonly IConnection _connection;
+    private readonly IChannel _channel;
 
     public PositionForwarderRabbitMq(IConfiguration configuration)
     {
-        exchange = configuration["Forward:Exchange"] ?? "traccar";
-        routingKey = configuration["Forward:Topic"] ?? "positions";
+        _exchange = configuration[ConfigKeys.Forward.Exchange] ?? ConfigKeys.Forward.DefaultExchange;
+        _routingKey = configuration[ConfigKeys.Forward.Topic] ?? ConfigKeys.Forward.DefaultTopic;
 
-        var factory = new ConnectionFactory { Uri = new Uri(configuration["Forward:Url"]!) };
-        connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
-        channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
-        channel.ExchangeDeclareAsync(exchange, ExchangeType.Topic, durable: true).GetAwaiter().GetResult();
+        var factory = new ConnectionFactory { Uri = new Uri(configuration[ConfigKeys.Forward.Url]!) };
+        _connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
+        _channel = _connection.CreateChannelAsync().GetAwaiter().GetResult();
+        _channel.ExchangeDeclareAsync(_exchange, ExchangeType.Topic, durable: true).GetAwaiter().GetResult();
     }
 
     public void Forward(PositionForwardData data, Action<bool, Exception?> resultHandler)
@@ -32,7 +32,7 @@ public sealed class PositionForwarderRabbitMq : IPositionForwarder, IAsyncDispos
         {
             var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data, JsonOptions));
             var properties = new BasicProperties { Persistent = true };
-            channel.BasicPublishAsync(exchange, routingKey, mandatory: false, properties, body)
+            _channel.BasicPublishAsync(_exchange, _routingKey, mandatory: false, properties, body)
                 .AsTask()
                 .ContinueWith(task => resultHandler(!task.IsFaulted, task.Exception));
         }
@@ -44,7 +44,7 @@ public sealed class PositionForwarderRabbitMq : IPositionForwarder, IAsyncDispos
 
     public async ValueTask DisposeAsync()
     {
-        await channel.CloseAsync();
-        await connection.CloseAsync();
+        await _channel.CloseAsync();
+        await _connection.CloseAsync();
     }
 }

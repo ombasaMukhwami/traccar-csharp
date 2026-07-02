@@ -10,20 +10,20 @@ public class Device : GroupedModel
 
     public string? Name { get; set; }
 
-    private string uniqueId = string.Empty;
+    private string _uniqueId = string.Empty;
 
     public string UniqueId
     {
-        get => uniqueId;
-        set => uniqueId = value.Trim();
+        get => _uniqueId;
+        set => _uniqueId = value.Trim();
     }
 
-    private string status = StatusOffline;
+    private string _status = StatusOffline;
 
     public string Status
     {
-        get => status;
-        set => status = value?.Trim() ?? StatusOffline;
+        get => _status;
+        set => _status = value?.Trim() ?? StatusOffline;
     }
 
     public DateTime? LastUpdate { get; set; }

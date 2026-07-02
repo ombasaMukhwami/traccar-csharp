@@ -3,12 +3,12 @@ using Traccar.Protocols.Helpers;
 
 namespace Traccar.Protocols.H02;
 
-public sealed class H02FrameDecoder(int messageLength) : BaseFrameDecoder
+public sealed class H02FrameDecoder(int _messageLength) : BaseFrameDecoder
 {
     private const int MessageShort = 32;
     private const int MessageLong = 45;
 
-    private int messageLength = messageLength;
+    private int _messageLength = _messageLength;
 
     protected override object? Decode(IChannelHandlerContext context, IChannel channel, ByteBuf buf)
     {
@@ -40,13 +40,13 @@ public sealed class H02FrameDecoder(int messageLength) : BaseFrameDecoder
                 break;
 
             case '$':
-                if (messageLength == 0)
+                if (_messageLength == 0)
                 {
-                    messageLength = buf.ReadableBytes == MessageLong ? MessageLong : MessageShort;
+                    _messageLength = buf.ReadableBytes == MessageLong ? MessageLong : MessageShort;
                 }
-                if (buf.ReadableBytes >= messageLength)
+                if (buf.ReadableBytes >= _messageLength)
                 {
-                    return buf.ReadRetainedSlice(messageLength);
+                    return buf.ReadRetainedSlice(_messageLength);
                 }
                 break;
 

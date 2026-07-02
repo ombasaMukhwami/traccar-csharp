@@ -151,33 +151,33 @@ public class Position : Message
 
     public bool Valid { get; set; }
 
-    private double latitude;
+    private double _latitude;
 
     public double Latitude
     {
-        get => latitude;
+        get => _latitude;
         set
         {
             if (value is < -90 or > 90)
             {
-                throw new ArgumentOutOfRangeException(nameof(value), "Latitude out of range");
+                throw new ArgumentOutOfRangeException(nameof(value), "_latitude out of range");
             }
-            latitude = value;
+            _latitude = value;
         }
     }
 
-    private double longitude;
+    private double _longitude;
 
     public double Longitude
     {
-        get => longitude;
+        get => _longitude;
         set
         {
             if (value is < -180 or > 180)
             {
-                throw new ArgumentOutOfRangeException(nameof(value), "Longitude out of range");
+                throw new ArgumentOutOfRangeException(nameof(value), "_longitude out of range");
             }
-            longitude = value;
+            _longitude = value;
         }
     }
 

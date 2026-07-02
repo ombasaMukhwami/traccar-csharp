@@ -1,29 +1,29 @@
 using DotNetty.Transport.Channels;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Traccar.Protocols;
 
 /// <summary>
-/// Mirrors Java Traccar's BaseProtocol implementing Protocol: each subclass declares its supported
-/// commands and registers one or more connectors (one per transport/port) from its constructor.
-/// The port for each protocol comes from configuration (Protocols:{name}:Port in appsettings.json),
-/// mirroring Java's config.getInteger(Keys.PROTOCOL_PORT.withPrefix(protocol)).
+/// Mirrors Java Traccar's BaseProtocol: each subclass declares its supported commands and registers
+/// one or more connectors from its constructor. Port and timeout are injected as a resolved
+/// ProtocolOptions instance — DI constructs each protocol via a factory that calls
+/// IOptionsMonitor&lt;ProtocolOptions&gt;.Get(name) so the concrete POCO rather than the monitor
+/// reaches the constructor.
 /// </summary>
 public abstract class BaseProtocol : IProtocol
 {
     /// <summary>Derived from the class name like Java's BaseProtocol.nameFromClass (Gt06Protocol -> "gt06").</summary>
     public string Name { get; }
 
-    private readonly IConfiguration configuration;
-    private readonly ILoggerFactory loggerFactory;
-    private readonly List<string> supportedDataCommands = [];
-    private readonly List<ITrackerConnector> connectorList = [];
+    private readonly ProtocolOptions _options;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly List<string> _supportedDataCommands = [];
+    private readonly List<ITrackerConnector> _connectorList = [];
 
-    protected BaseProtocol(IConfiguration configuration, ILoggerFactory loggerFactory)
+    protected BaseProtocol(ProtocolOptions options, ILoggerFactory loggerFactory)
     {
-        this.configuration = configuration;
-        this.loggerFactory = loggerFactory;
+        _options = options;
+        _loggerFactory = loggerFactory;
         Name = NameFromType(GetType());
     }
 
@@ -36,11 +36,11 @@ public abstract class BaseProtocol : IProtocol
             : className).ToLowerInvariant();
     }
 
-    public IReadOnlyCollection<string> SupportedDataCommands => supportedDataCommands;
+    public IReadOnlyCollection<string> SupportedDataCommands => _supportedDataCommands;
 
-    protected void SetSupportedDataCommands(params string[] commands) => supportedDataCommands.AddRange(commands);
+    protected void SetSupportedDataCommands(params string[] commands) => _supportedDataCommands.AddRange(commands);
 
-    public IReadOnlyCollection<ITrackerConnector> ConnectorList => connectorList;
+    public IReadOnlyCollection<ITrackerConnector> ConnectorList => _connectorList;
 
     /// <summary>Registers a TCP listener on this protocol's configured port.</summary>
     protected void AddServer(Action<IChannelPipeline> configurePipeline)
@@ -54,15 +54,8 @@ public abstract class BaseProtocol : IProtocol
     /// </summary>
     protected void AddServer(bool datagram, Action<IChannelPipeline> configurePipeline)
     {
-        var key = $"Protocols:{Name}:Port";
-        var port = configuration.GetValue<int?>(key)
-            ?? throw new InvalidOperationException($"Missing configuration value '{key}' for protocol '{Name}'");
-
-        // Mirrors Java's BasePipelineFactory: protocol.timeout overrides server.timeout (default 1800s).
-        var timeoutSeconds = configuration.GetValue<int?>($"Protocols:{Name}:Timeout")
-            ?? configuration.GetValue("Server:Timeout", 1800);
-
-        connectorList.Add(new ProtocolServer(
-            Name, port, datagram, timeoutSeconds, configurePipeline, loggerFactory.CreateLogger<ProtocolServer>()));
+        _connectorList.Add(new ProtocolServer(
+            _options.Name, _options.Port, datagram, _options.Timeout, configurePipeline,
+            _loggerFactory.CreateLogger<ProtocolServer>()));
     }
 }

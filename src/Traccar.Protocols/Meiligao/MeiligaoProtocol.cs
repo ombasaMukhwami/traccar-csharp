@@ -11,10 +11,11 @@ namespace Traccar.Protocols.Meiligao;
 public sealed class MeiligaoProtocol : BaseProtocol
 {
     public MeiligaoProtocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         SetSupportedDataCommands(
             Command.TypePositionSingle,

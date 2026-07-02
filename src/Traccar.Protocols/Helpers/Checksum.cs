@@ -20,21 +20,21 @@ public static class Checksum
 
     public sealed class Algorithm
     {
-        private readonly int poly;
+        private readonly int _poly;
         internal readonly int init;
-        private readonly bool refIn;
-        private readonly bool refOut;
-        private readonly int xorOut;
-        private readonly int[] table;
+        private readonly bool _refIn;
+        private readonly bool _refOut;
+        private readonly int _xorOut;
+        private readonly int[] _table;
 
-        public Algorithm(int bits, int poly, int init, bool refIn, bool refOut, int xorOut)
+        public Algorithm(int bits, int poly, int initValue, bool refIn, bool refOut, int xorOut)
         {
-            this.poly = poly;
-            this.init = init;
-            this.refIn = refIn;
-            this.refOut = refOut;
-            this.xorOut = xorOut;
-            table = bits switch
+            _poly = poly;
+            init = initValue;
+            _refIn = refIn;
+            _refOut = refOut;
+            _xorOut = xorOut;
+            _table = bits switch
             {
                 8 => InitTable8(),
                 16 => InitTable16(),
@@ -44,7 +44,7 @@ public static class Checksum
 
         private int[] InitTable8()
         {
-            var table = new int[256];
+            var _table = new int[256];
             for (var i = 0; i < 256; i++)
             {
                 var crc = i;
@@ -54,17 +54,17 @@ public static class Checksum
                     crc <<= 1;
                     if (bit)
                     {
-                        crc ^= poly;
+                        crc ^= _poly;
                     }
                 }
-                table[i] = crc & 0xFF;
+                _table[i] = crc & 0xFF;
             }
-            return table;
+            return _table;
         }
 
         private int[] InitTable16()
         {
-            var table = new int[256];
+            var _table = new int[256];
             for (var i = 0; i < 256; i++)
             {
                 var crc = i << 8;
@@ -74,36 +74,36 @@ public static class Checksum
                     crc <<= 1;
                     if (bit)
                     {
-                        crc ^= poly;
+                        crc ^= _poly;
                     }
                 }
-                table[i] = crc & 0xFFFF;
+                _table[i] = crc & 0xFFFF;
             }
-            return table;
+            return _table;
         }
 
         private int[] InitTable32()
         {
-            var table = new int[256];
+            var _table = new int[256];
             for (var i = 0; i < 256; i++)
             {
                 var crc = i << 24;
                 for (var j = 0; j < 8; j++)
                 {
-                    crc = (crc & unchecked((int)0x80000000)) != 0 ? (crc << 1) ^ poly : crc << 1;
+                    crc = (crc & unchecked((int)0x80000000)) != 0 ? (crc << 1) ^ _poly : crc << 1;
                 }
-                table[i] = crc;
+                _table[i] = crc;
             }
-            return table;
+            return _table;
         }
 
-        internal int[] Table => table;
+        internal int[] Table => _table;
 
-        internal bool RefIn => refIn;
+        internal bool RefIn => _refIn;
 
-        internal bool RefOut => refOut;
+        internal bool RefOut => _refOut;
 
-        internal int XorOut => xorOut;
+        internal int XorOut => _xorOut;
     }
 
     private static int Reverse(int value, int bits)

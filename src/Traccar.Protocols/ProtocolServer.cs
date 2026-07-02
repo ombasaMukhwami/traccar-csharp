@@ -17,11 +17,11 @@ public sealed class ProtocolServer(
     Action<IChannelPipeline> configurePipeline, ILogger<ProtocolServer> logger)
     : ITrackerConnector
 {
-    private readonly ConcurrentDictionary<IChannel, byte> channels = new();
+    private readonly ConcurrentDictionary<IChannel, byte> _channels = new();
 
-    private IEventLoopGroup? bossGroup;
-    private IEventLoopGroup? workerGroup;
-    private IChannel? serverChannel;
+    private IEventLoopGroup? _bossGroup;
+    private IEventLoopGroup? _workerGroup;
+    private IChannel? _serverChannel;
 
     public string Name { get; } = name;
 
@@ -31,7 +31,7 @@ public sealed class ProtocolServer(
 
     public async Task StartAsync()
     {
-        workerGroup = new MultithreadEventLoopGroup();
+        _workerGroup = new MultithreadEventLoopGroup();
 
         if (IsDatagram)
         {
@@ -39,23 +39,23 @@ public sealed class ProtocolServer(
             // is attached directly via Handler rather than ChildHandler (no accept/listen step).
             // There is no per-client connection to idle-timeout or track for graceful shutdown.
             var bootstrap = new Bootstrap()
-                .Group(workerGroup)
+                .Group(_workerGroup)
                 .Channel<SocketDatagramChannel>()
                 .Handler(new ActionChannelInitializer<IChannel>(channel => configurePipeline(channel.Pipeline)));
 
-            serverChannel = await bootstrap.BindAsync(IPAddress.Any, port);
+            _serverChannel = await bootstrap.BindAsync(IPAddress.Any, port);
         }
         else
         {
-            bossGroup = new MultithreadEventLoopGroup(1);
+            _bossGroup = new MultithreadEventLoopGroup(1);
 
             var bootstrap = new ServerBootstrap()
-                .Group(bossGroup, workerGroup)
+                .Group(_bossGroup, _workerGroup)
                 .Channel<TcpServerSocketChannel>()
                 .ChildHandler(new ActionChannelInitializer<ISocketChannel>(channel =>
                 {
                     var pipeline = channel.Pipeline;
-                    pipeline.AddLast(new OpenChannelHandler(channels));
+                    pipeline.AddLast(new OpenChannelHandler(_channels));
                     if (timeoutSeconds > 0)
                     {
                         pipeline.AddLast(new IdleStateHandler(timeoutSeconds, 0, 0));
@@ -64,7 +64,7 @@ public sealed class ProtocolServer(
                     configurePipeline(pipeline);
                 }));
 
-            serverChannel = await bootstrap.BindAsync(IPAddress.Any, port);
+            _serverChannel = await bootstrap.BindAsync(IPAddress.Any, port);
         }
 
         logger.LogInformation(
@@ -73,13 +73,13 @@ public sealed class ProtocolServer(
 
     public async Task StopAsync()
     {
-        if (serverChannel != null)
+        if (_serverChannel != null)
         {
-            await serverChannel.CloseAsync();
+            await _serverChannel.CloseAsync();
         }
-        await Task.WhenAll(channels.Keys.Select(channel => channel.CloseAsync()));
+        await Task.WhenAll(_channels.Keys.Select(channel => channel.CloseAsync()));
         await Task.WhenAll(
-            bossGroup?.ShutdownGracefullyAsync() ?? Task.CompletedTask,
-            workerGroup?.ShutdownGracefullyAsync() ?? Task.CompletedTask);
+            _bossGroup?.ShutdownGracefullyAsync() ?? Task.CompletedTask,
+            _workerGroup?.ShutdownGracefullyAsync() ?? Task.CompletedTask);
     }
 }

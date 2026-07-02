@@ -17,6 +17,12 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
     public DbSet<Command> Commands => Set<Command>();
 
+    public DbSet<UserDevice> UserDevices => Set<UserDevice>();
+
+    public DbSet<UserGroup> UserGroups => Set<UserGroup>();
+
+    public DbSet<GroupDevice> GroupDevices => Set<GroupDevice>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Device>(entity =>
@@ -68,6 +74,24 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.HasIndex(e => e.DeviceId);
+        });
+
+        modelBuilder.Entity<UserDevice>(entity =>
+        {
+            entity.ToTable("tc_user_device");
+            entity.HasKey(e => new { e.UserId, e.DeviceId });
+        });
+
+        modelBuilder.Entity<UserGroup>(entity =>
+        {
+            entity.ToTable("tc_user_group");
+            entity.HasKey(e => new { e.UserId, e.GroupId });
+        });
+
+        modelBuilder.Entity<GroupDevice>(entity =>
+        {
+            entity.ToTable("tc_group_device");
+            entity.HasKey(e => new { e.GroupId, e.DeviceId });
         });
     }
 }

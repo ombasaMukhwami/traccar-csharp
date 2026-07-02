@@ -21,7 +21,7 @@ public sealed class Jt808ProtocolEncoder(
         var decoder = channel.Pipeline.Get<Jt808ProtocolDecoder>()
             ?? throw new InvalidOperationException("Jt808ProtocolDecoder not found in pipeline");
 
-        var alternative = configuration.GetValue<bool>("Protocols:jt808:Alternative");
+        var alternative = configuration.GetValue<bool>($"{ConfigKeys.Protocols.SectionPrefix}:jt808:{ConfigKeys.Protocols.Alternative}");
 
         var protocolVersion = decoder.ProtocolVersion;
         var id = Jt808ProtocolDecoder.EncodeId(GetUniqueId(command.DeviceId), protocolVersion != null ? 10 : 6);
@@ -106,9 +106,9 @@ public sealed class Jt808ProtocolEncoder(
                     }
                 case Command.TypeVideoStart:
                     {
-                        var webUrl = configuration.GetValue<string>("Server:WebUrl");
+                        var webUrl = configuration.GetValue<string>(ConfigKeys.Server.WebUrl);
                         var host = webUrl != null ? new Uri(webUrl).Host : null;
-                        var port = configuration.GetValue<int?>("Protocols:jt1078:Port") ?? 0;
+                        var port = configuration.GetValue<int?>($"{ConfigKeys.Protocols.SectionPrefix}:jt1078:{ConfigKeys.Protocols.Port}") ?? 0;
                         var videoChannel = command.GetInteger(Command.KeyIndex, 1);
                         var hostBytes = Encoding.ASCII.GetBytes(host ?? string.Empty);
                         data.WriteByte(hostBytes.Length);

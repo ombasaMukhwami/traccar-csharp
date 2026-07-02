@@ -8,25 +8,25 @@ namespace Traccar.Protocols;
 /// </summary>
 public sealed class ServerManager : ILifecycleObject
 {
-    private readonly List<ITrackerConnector> connectorList = [];
-    private readonly Dictionary<string, BaseProtocol> protocolList = [];
-    private readonly ILogger<ServerManager> logger;
+    private readonly List<ITrackerConnector> _connectorList = [];
+    private readonly Dictionary<string, BaseProtocol> _protocolList = [];
+    private readonly ILogger<ServerManager> _logger;
 
     public ServerManager(IEnumerable<BaseProtocol> protocols, ILogger<ServerManager> logger)
     {
-        this.logger = logger;
+        _logger = logger;
         foreach (var protocol in protocols)
         {
-            connectorList.AddRange(protocol.ConnectorList);
-            protocolList[protocol.Name] = protocol;
+            _connectorList.AddRange(protocol.ConnectorList);
+            _protocolList[protocol.Name] = protocol;
         }
     }
 
-    public BaseProtocol? GetProtocol(string name) => protocolList.GetValueOrDefault(name);
+    public BaseProtocol? GetProtocol(string name) => _protocolList.GetValueOrDefault(name);
 
     public async Task StartAsync()
     {
-        foreach (var connector in connectorList)
+        foreach (var connector in _connectorList)
         {
             try
             {
@@ -34,14 +34,14 @@ public sealed class ServerManager : ILifecycleObject
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "Port disabled due to conflict");
+                _logger.LogWarning(e, "Port disabled due to conflict");
             }
         }
     }
 
     public async Task StopAsync()
     {
-        foreach (var connector in connectorList)
+        foreach (var connector in _connectorList)
         {
             await connector.StopAsync();
         }

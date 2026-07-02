@@ -2,12 +2,12 @@ namespace Traccar.Model;
 
 public class WifiAccessPoint
 {
-    public static WifiAccessPoint From(string macAddress, int signalStrength, int? channel = null)
+    public static WifiAccessPoint From(string macAddress, int _signalStrength, int? channel = null)
     {
         var wifiAccessPoint = new WifiAccessPoint
         {
             MacAddress = macAddress,
-            SignalStrength = signalStrength,
+            _signalStrength = _signalStrength,
         };
         if (channel.HasValue)
         {
@@ -18,12 +18,12 @@ public class WifiAccessPoint
 
     public string? MacAddress { get; set; }
 
-    private int? signalStrength;
+    private int? _signalStrength;
 
     public int? SignalStrength
     {
-        get => signalStrength;
-        set => signalStrength = value is > 0 ? -value : value;
+        get => _signalStrength;
+        set => _signalStrength = value is > 0 ? -value : value;
     }
 
     public int? Channel { get; set; }

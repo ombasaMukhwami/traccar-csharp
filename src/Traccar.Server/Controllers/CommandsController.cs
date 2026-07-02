@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Traccar.Model;
@@ -16,6 +17,7 @@ namespace Traccar.Server.Controllers;
 /// an error otherwise rather than silently queuing it for later delivery.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/commands")]
 public class CommandsController(TraccarDbContext db, ConnectionManager connectionManager, ServerManager serverManager) : ControllerBase
 {

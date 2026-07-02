@@ -11,10 +11,11 @@ namespace Traccar.Protocols.Niot;
 public sealed class NiotProtocol : BaseProtocol
 {
     public NiotProtocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         AddServer(pipeline =>
         {

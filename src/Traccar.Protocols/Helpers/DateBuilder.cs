@@ -7,29 +7,29 @@ namespace Traccar.Protocols.Helpers;
 /// </summary>
 public sealed class DateBuilder(TimeZoneInfo? timeZone = null)
 {
-    private int year = 1970;
-    private int month = 1;
-    private int day = 1;
-    private int hour;
-    private int minute;
-    private int second;
-    private int millisecond;
+    private int _year = 1970;
+    private int _month = 1;
+    private int _day = 1;
+    private int _hour;
+    private int _minute;
+    private int _second;
+    private int _millisecond;
 
     public DateBuilder SetYear(int year)
     {
-        this.year = year < 100 ? year + 2000 : year;
+        _year = year < 100 ? year + 2000 : year;
         return this;
     }
 
     public DateBuilder SetMonth(int month)
     {
-        this.month = month;
+        _month = month;
         return this;
     }
 
     public DateBuilder SetDay(int day)
     {
-        this.day = day;
+        _day = day;
         return this;
     }
 
@@ -39,25 +39,25 @@ public sealed class DateBuilder(TimeZoneInfo? timeZone = null)
 
     public DateBuilder SetHour(int hour)
     {
-        this.hour = hour;
+        _hour = hour;
         return this;
     }
 
     public DateBuilder SetMinute(int minute)
     {
-        this.minute = minute;
+        _minute = minute;
         return this;
     }
 
     public DateBuilder SetSecond(int second)
     {
-        this.second = second;
+        _second = second;
         return this;
     }
 
     public DateBuilder SetMillis(int millis)
     {
-        millisecond = millis;
+        _millisecond = millis;
         return this;
     }
 
@@ -71,12 +71,12 @@ public sealed class DateBuilder(TimeZoneInfo? timeZone = null)
 
     public DateTime GetDate()
     {
-        var safeMonth = Math.Clamp(month, 1, 12);
-        var safeDay = Math.Clamp(day, 1, DateTime.DaysInMonth(year, safeMonth));
+        var safeMonth = Math.Clamp(_month, 1, 12);
+        var safeDay = Math.Clamp(_day, 1, DateTime.DaysInMonth(_year, safeMonth));
         var date = new DateTime(
-            year, safeMonth, safeDay,
-            Math.Clamp(hour, 0, 23), Math.Clamp(minute, 0, 59), Math.Clamp(second, 0, 59),
-            Math.Clamp(millisecond, 0, 999), DateTimeKind.Unspecified);
+            _year, safeMonth, safeDay,
+            Math.Clamp(_hour, 0, 23), Math.Clamp(_minute, 0, 59), Math.Clamp(_second, 0, 59),
+            Math.Clamp(_millisecond, 0, 999), DateTimeKind.Unspecified);
         return timeZone == null
             ? DateTime.SpecifyKind(date, DateTimeKind.Utc)
             : TimeZoneInfo.ConvertTimeToUtc(date, timeZone);

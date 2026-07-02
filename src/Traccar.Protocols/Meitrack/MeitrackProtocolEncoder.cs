@@ -22,7 +22,7 @@ public sealed class MeitrackProtocolEncoder(
 
     protected override object? EncodeCommand(Command command)
     {
-        var alternative = configuration.GetValue<bool>("Protocols:meitrack:Alternative");
+        var alternative = configuration.GetValue<bool>($"{ConfigKeys.Protocols.SectionPrefix}:meitrack:{ConfigKeys.Protocols.Alternative}");
 
         return command.Type switch
         {

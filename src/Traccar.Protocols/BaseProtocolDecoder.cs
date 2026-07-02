@@ -109,12 +109,12 @@ public abstract class BaseProtocolDecoder(
         }
     }
 
-    private string? modelOverride;
+    private string? _modelOverride;
 
     /// <summary>Forces GetDeviceModel to report this model regardless of the device's actual one.</summary>
-    public void SetModelOverride(string? modelOverride) => this.modelOverride = modelOverride;
+    public void SetModelOverride(string? modelOverride) => _modelOverride = modelOverride;
 
-    protected string? GetDeviceModel(DeviceSession deviceSession) => modelOverride ?? deviceSession.Model;
+    protected string? GetDeviceModel(DeviceSession deviceSession) => _modelOverride ?? deviceSession.Model;
 
     /// <summary>
     /// Resolves a fallback timezone for decoding local-time-encoded fields (e.g. JT808's BCD
@@ -133,21 +133,21 @@ public abstract class BaseProtocolDecoder(
         return TimeZoneInfo.Utc;
     }
 
-    private IByteBuffer? mediaBuffer;
+    private IByteBuffer? _mediaBuffer;
 
-    protected IByteBuffer? GetMediaBuffer() => mediaBuffer;
+    protected IByteBuffer? GetMediaBuffer() => _mediaBuffer;
 
     protected IByteBuffer NewMediaBuffer(int size = 0)
     {
         ReleaseMediaBuffer();
-        mediaBuffer = Unpooled.Buffer(size);
-        return mediaBuffer;
+        _mediaBuffer = Unpooled.Buffer(size);
+        return _mediaBuffer;
     }
 
     private void ReleaseMediaBuffer()
     {
-        mediaBuffer?.Release();
-        mediaBuffer = null;
+        _mediaBuffer?.Release();
+        _mediaBuffer = null;
     }
 
     public override void ChannelInactive(IChannelHandlerContext context)

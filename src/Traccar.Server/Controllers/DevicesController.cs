@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Traccar.Model;
@@ -6,6 +7,7 @@ using Traccar.Storage;
 namespace Traccar.Server.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/devices")]
 public class DevicesController(TraccarDbContext db) : ControllerBase
 {

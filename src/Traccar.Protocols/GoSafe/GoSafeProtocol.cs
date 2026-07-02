@@ -10,10 +10,11 @@ namespace Traccar.Protocols.GoSafe;
 public sealed class GoSafeProtocol : BaseProtocol
 {
     public GoSafeProtocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         // GoSafe has no protocol encoder in Java either - no data commands are supported.
         AddServer(pipeline =>

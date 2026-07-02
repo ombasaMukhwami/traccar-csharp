@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Traccar.Protocols.Forward;
 using Traccar.Protocols.Media;
 using Traccar.Protocols.Session;
@@ -15,12 +16,12 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddTraccarPositionForwarding(this IServiceCollection services, IConfiguration configuration)
     {
-        switch (configuration["Forward:Type"])
+        switch (configuration[ConfigKeys.Forward.Type])
         {
-            case "kafka":
+            case ConfigKeys.Forward.TypeKafka:
                 services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderKafka(configuration));
                 break;
-            case "rabbitmq":
+            case ConfigKeys.Forward.TypeRabbitMq:
                 services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderRabbitMq(configuration));
                 break;
         }
@@ -30,11 +31,15 @@ public static class DependencyInjection
 
     /// <summary>
     /// Registers the connection manager and every supported device protocol that is both allowed by
-    /// the optional Protocols:Enable allow-list and has a configured (and positive) port. Mirrors
-    /// Java's ServerManager, which reflection-scans for BaseProtocol subclasses (ClassScanner.
-    /// findSubclasses) and only calls injector.getInstance(protocolClass) - constructing the protocol
-    /// and eagerly binding its listeners - under the same two conditions; protocols that fail either
-    /// check are never instantiated, so a missing config section never crashes the host.
+    /// the optional Protocols:Enable allow-list and has a configured (and positive) port.
+    ///
+    /// For each protocol:
+    ///   1. Named ProtocolOptions are registered via IOptionsMonitor (services.Configure), binding
+    ///      the "Protocols:{name}" section so the monitor is available to any consumer.
+    ///   2. The protocol singleton is registered with a factory that calls
+    ///      IOptionsMonitor.Get(name) to materialise the concrete ProtocolOptions instance and
+    ///      passes it to ActivatorUtilities.CreateInstance — so constructors receive ProtocolOptions
+    ///      directly rather than IOptionsMonitor.
     /// </summary>
     public static IServiceCollection AddTraccarProtocols(this IServiceCollection services, IConfiguration configuration)
     {
@@ -44,7 +49,7 @@ public static class DependencyInjection
         services.AddTraccarPositionForwarding(configuration);
 
         HashSet<string>? enabledProtocols = null;
-        var enableList = configuration["Protocols:Enable"];
+        var enableList = configuration[ConfigKeys.Protocols.Enable];
         if (!string.IsNullOrEmpty(enableList))
         {
             enabledProtocols = enableList.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
@@ -61,11 +66,31 @@ public static class DependencyInjection
             {
                 continue;
             }
-            if (configuration.GetValue<int?>($"Protocols:{name}:Port") is not > 0)
+            if (configuration.GetValue<int?>($"{ConfigKeys.Protocols.SectionPrefix}:{name}:{ConfigKeys.Protocols.Port}") is not > 0)
             {
                 continue;
             }
-            services.AddSingleton(typeof(BaseProtocol), type);
+
+            // Register named options — makes IOptionsMonitor<ProtocolOptions> available to any
+            // consumer that wants to inspect or monitor protocol configuration.
+            var section = configuration.GetSection($"{ConfigKeys.Protocols.SectionPrefix}:{name}");
+            services.Configure<ProtocolOptions>(name, opts =>
+            {
+                opts.Name = name;
+                opts.Port = section.GetValue<int>(ConfigKeys.Protocols.Port);
+                opts.Timeout = section.GetValue(ConfigKeys.Protocols.Timeout, ProtocolOptions.DefaultTimeout);
+            });
+
+            // Register the protocol as a singleton via factory: resolve the named ProtocolOptions
+            // from IOptionsMonitor and inject the concrete instance into the protocol constructor
+            // via ActivatorUtilities, so protocols depend on ProtocolOptions not on the monitor.
+            var capturedName = name;
+            var capturedType = type;
+            services.AddSingleton(typeof(BaseProtocol), sp =>
+            {
+                var opts = sp.GetRequiredService<IOptionsMonitor<ProtocolOptions>>().Get(capturedName);
+                return ActivatorUtilities.CreateInstance(sp, capturedType, opts);
+            });
         }
 
         services.AddSingleton<ServerManager>();

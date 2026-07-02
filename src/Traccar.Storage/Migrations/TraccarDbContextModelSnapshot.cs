@@ -161,6 +161,19 @@ namespace Traccar.Storage.Migrations
                     b.ToTable("tc_groups", (string)null);
                 });
 
+            modelBuilder.Entity("Traccar.Model.GroupDevice", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DeviceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "DeviceId");
+
+                    b.ToTable("tc_group_device", (string)null);
+                });
+
             modelBuilder.Entity("Traccar.Model.Position", b =>
                 {
                     b.Property<long>("Id")
@@ -273,6 +286,32 @@ namespace Traccar.Storage.Migrations
                         .IsUnique();
 
                     b.ToTable("tc_users", (string)null);
+                });
+
+            modelBuilder.Entity("Traccar.Model.UserDevice", b =>
+                {
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DeviceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "DeviceId");
+
+                    b.ToTable("tc_user_device", (string)null);
+                });
+
+            modelBuilder.Entity("Traccar.Model.UserGroup", b =>
+                {
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "GroupId");
+
+                    b.ToTable("tc_user_group", (string)null);
                 });
 #pragma warning restore 612, 618
         }

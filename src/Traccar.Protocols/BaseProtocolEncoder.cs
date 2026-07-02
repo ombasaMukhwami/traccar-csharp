@@ -49,16 +49,16 @@ public abstract class BaseProtocolEncoder(
         return db.Devices.Find(deviceId)?.UniqueId ?? string.Empty;
     }
 
-    private string? modelOverride;
+    private string? _modelOverride;
 
     /// <summary>Forces GetDeviceModel to report this model regardless of the device's actual one.</summary>
-    public void SetModelOverride(string? modelOverride) => this.modelOverride = modelOverride;
+    public void SetModelOverride(string? modelOverride) => _modelOverride = modelOverride;
 
     protected string? GetDeviceModel(long deviceId)
     {
-        if (modelOverride != null)
+        if (_modelOverride != null)
         {
-            return modelOverride;
+            return _modelOverride;
         }
         using var db = dbContextFactory.CreateDbContext();
         return db.Devices.Find(deviceId)?.Model;

@@ -11,10 +11,11 @@ namespace Traccar.Protocols.H02;
 public sealed class H02Protocol : BaseProtocol
 {
     public H02Protocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         SetSupportedDataCommands(
             Command.TypeAlarmArm,

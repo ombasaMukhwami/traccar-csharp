@@ -1,15 +1,17 @@
+using System.Text.Json.Serialization;
+
 namespace Traccar.Model;
 
 public class User : ExtendedModel
 {
     public string? Name { get; set; }
 
-    private string email = string.Empty;
+    private string _email = string.Empty;
 
     public string Email
     {
-        get => email;
-        set => email = value.Trim();
+        get => _email;
+        set => _email = value.Trim();
     }
 
     public string? Phone { get; set; }
@@ -33,8 +35,10 @@ public class User : ExtendedModel
         Salt = result.Salt;
     }
 
+    [JsonIgnore]
     public string? HashedPassword { get; set; }
 
+    [JsonIgnore]
     public string? Salt { get; set; }
 
     public bool IsPasswordValid(string password) => Hashing.ValidatePassword(password, HashedPassword, Salt);

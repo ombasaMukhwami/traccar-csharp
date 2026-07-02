@@ -11,10 +11,11 @@ namespace Traccar.Protocols.Teltonika;
 public sealed class TeltonikaProtocol : BaseProtocol
 {
     public TeltonikaProtocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         SetSupportedDataCommands(Command.TypeCustom, Command.TypeEngineStop, Command.TypeEngineResume);
 

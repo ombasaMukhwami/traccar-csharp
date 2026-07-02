@@ -15,9 +15,9 @@ public sealed class VideoStreamWriter
     private const int StreamTypeH264 = 0x1B;
     private const int StreamTypeH265 = 0x24;
 
-    private int patContinuityCounter;
-    private int pmtContinuityCounter;
-    private int videoContinuityCounter;
+    private int _patContinuityCounter;
+    private int _pmtContinuityCounter;
+    private int _videoContinuityCounter;
 
     public void Write(IByteBuffer output, IByteBuffer nalData, long pts, bool isKeyFrame, int payloadType)
     {
@@ -42,7 +42,7 @@ public sealed class VideoStreamWriter
         output.WriteByte(0x47); // sync byte
         output.WriteByte(0x40); // payload unit start + PID high (0)
         output.WriteByte(0x00); // PID low (PAT = 0x0000)
-        output.WriteByte(0x10 | (patContinuityCounter++ & 0x0F)); // payload only
+        output.WriteByte(0x10 | (_patContinuityCounter++ & 0x0F)); // payload only
 
         // pointer field
         output.WriteByte(0x00);
@@ -76,7 +76,7 @@ public sealed class VideoStreamWriter
         // TS header
         output.WriteByte(0x47);
         output.WriteShort(0x4000 | PmtPid); // payload unit start + PMT PID
-        output.WriteByte(0x10 | (pmtContinuityCounter++ & 0x0F));
+        output.WriteByte(0x10 | (_pmtContinuityCounter++ & 0x0F));
 
         // pointer field
         output.WriteByte(0x00);
@@ -183,7 +183,7 @@ public sealed class VideoStreamWriter
             if (first && isKeyFrame)
             {
                 // adaptation field with PCR and random access indicator
-                output.WriteByte(0x30 | (videoContinuityCounter++ & 0x0F)); // adaptation + payload
+                output.WriteByte(0x30 | (_videoContinuityCounter++ & 0x0F)); // adaptation + payload
                 output.WriteByte(0x07); // adaptation field length
                 output.WriteByte(0x50); // random access indicator + PCR flag
                 // PCR base (33 bits) + reserved (6) + extension (9)
@@ -203,7 +203,7 @@ public sealed class VideoStreamWriter
                 {
                     // need stuffing via adaptation field
                     var stuffingLength = available - remaining;
-                    output.WriteByte(0x30 | (videoContinuityCounter++ & 0x0F));
+                    output.WriteByte(0x30 | (_videoContinuityCounter++ & 0x0F));
                     if (stuffingLength == 1)
                     {
                         output.WriteByte(0x00);
@@ -222,7 +222,7 @@ public sealed class VideoStreamWriter
                 }
                 else
                 {
-                    output.WriteByte(0x10 | (videoContinuityCounter++ & 0x0F)); // payload only
+                    output.WriteByte(0x10 | (_videoContinuityCounter++ & 0x0F)); // payload only
                 }
             }
 

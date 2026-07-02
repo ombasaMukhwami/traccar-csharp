@@ -9,18 +9,18 @@ public sealed class PositionForwarderKafka : IPositionForwarder, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private readonly IProducer<string, string> producer;
-    private readonly string topic;
+    private readonly IProducer<string, string> _producer;
+    private readonly string _topic;
 
     public PositionForwarderKafka(IConfiguration configuration)
     {
         var config = new ProducerConfig
         {
-            BootstrapServers = configuration["Forward:Url"],
+            BootstrapServers = configuration[ConfigKeys.Forward.Url],
             Acks = Acks.All,
         };
-        producer = new ProducerBuilder<string, string>(config).Build();
-        topic = configuration["Forward:Topic"] ?? "positions";
+        _producer = new ProducerBuilder<string, string>(config).Build();
+        _topic = configuration[ConfigKeys.Forward.Topic] ?? ConfigKeys.Forward.DefaultTopic;
     }
 
     public void Forward(PositionForwardData data, Action<bool, Exception?> resultHandler)
@@ -29,7 +29,7 @@ public sealed class PositionForwarderKafka : IPositionForwarder, IDisposable
         {
             var key = data.Position.DeviceId.ToString();
             var value = JsonSerializer.Serialize(data, JsonOptions);
-            producer.Produce(topic, new Message<string, string> { Key = key, Value = value }, report =>
+            _producer.Produce(_topic, new Message<string, string> { Key = key, Value = value }, report =>
             {
                 resultHandler(report.Error.IsError == false, report.Error.IsError ? new KafkaException(report.Error) : null);
             });
@@ -40,5 +40,5 @@ public sealed class PositionForwarderKafka : IPositionForwarder, IDisposable
         }
     }
 
-    public void Dispose() => producer.Dispose();
+    public void Dispose() => _producer.Dispose();
 }

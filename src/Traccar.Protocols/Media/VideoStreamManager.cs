@@ -5,88 +5,88 @@ using DotNetty.Buffers;
 namespace Traccar.Protocols.Media;
 
 /// <summary>
-/// Buffers incoming JT1078 video frames per device/channel into rolling MPEG-TS segments and serves
+/// Buffers incoming JT1078 video frames per device/channel into rolling MPEG-TS _segments and serves
 /// an HLS playlist, mirroring Java's VideoStreamManager.
 /// </summary>
 public sealed class VideoStreamManager
 {
     private const int MaxSegments = 5;
 
-    private readonly ConcurrentDictionary<string, DeviceStream> streams = new();
+    private readonly ConcurrentDictionary<string, DeviceStream> _streams = new();
 
     public void HandleFrame(long deviceId, int channel, IByteBuffer nalData, long timestamp, bool isKeyFrame, int payloadType)
-        => streams.GetOrAdd(Key(deviceId, channel), _ => new DeviceStream()).AddFrame(nalData, timestamp, isKeyFrame, payloadType);
+        => _streams.GetOrAdd(Key(deviceId, channel), _ => new DeviceStream()).AddFrame(nalData, timestamp, isKeyFrame, payloadType);
 
     public string GetPlaylist(long deviceId, int channel)
-        => streams.TryGetValue(Key(deviceId, channel), out var stream) ? stream.GetPlaylist() : DeviceStream.EmptyPlaylist;
+        => _streams.TryGetValue(Key(deviceId, channel), out var stream) ? stream.GetPlaylist() : DeviceStream.EmptyPlaylist;
 
     public void RemoveStream(long deviceId, int channel)
     {
-        if (streams.TryRemove(Key(deviceId, channel), out var stream))
+        if (_streams.TryRemove(Key(deviceId, channel), out var stream))
         {
             stream.Release();
         }
     }
 
     public IByteBuffer? GetSegment(long deviceId, int channel, int index)
-        => streams.TryGetValue(Key(deviceId, channel), out var stream) ? stream.GetSegment(index) : null;
+        => _streams.TryGetValue(Key(deviceId, channel), out var stream) ? stream.GetSegment(index) : null;
 
     private static string Key(long deviceId, int channel) => $"{deviceId}_{channel}";
 
     private sealed class DeviceStream
     {
-        private readonly object sync = new();
-        private readonly VideoStreamWriter writer = new();
-        private readonly Dictionary<int, IByteBuffer> segments = [];
-        private readonly List<int> segmentOrder = [];
-        private IByteBuffer? currentSegment;
-        private int segmentIndex;
-        private long firstTimestamp;
+        private readonly object _sync = new();
+        private readonly VideoStreamWriter _writer = new();
+        private readonly Dictionary<int, IByteBuffer> _segments = [];
+        private readonly List<int> _segmentOrder = [];
+        private IByteBuffer? _currentSegment;
+        private int _segmentIndex;
+        private long _firstTimestamp;
 
         public void AddFrame(IByteBuffer nalData, long timestamp, bool isKeyFrame, int payloadType)
         {
-            lock (sync)
+            lock (_sync)
             {
-                if (isKeyFrame && currentSegment != null)
+                if (isKeyFrame && _currentSegment != null)
                 {
                     FinalizeSegment();
                 }
 
-                if (currentSegment == null)
+                if (_currentSegment == null)
                 {
-                    currentSegment = Unpooled.Buffer();
-                    if (firstTimestamp == 0)
+                    _currentSegment = Unpooled.Buffer();
+                    if (_firstTimestamp == 0)
                     {
-                        firstTimestamp = timestamp;
+                        _firstTimestamp = timestamp;
                     }
                 }
 
-                writer.Write(currentSegment, nalData, timestamp - firstTimestamp, isKeyFrame, payloadType);
+                _writer.Write(_currentSegment, nalData, timestamp - _firstTimestamp, isKeyFrame, payloadType);
             }
         }
 
         private void FinalizeSegment()
         {
-            segments[segmentIndex] = currentSegment!;
-            segmentOrder.Add(segmentIndex);
-            segmentIndex++;
-            currentSegment = null;
+            _segments[_segmentIndex] = _currentSegment!;
+            _segmentOrder.Add(_segmentIndex);
+            _segmentIndex++;
+            _currentSegment = null;
 
-            while (segmentOrder.Count > MaxSegments)
+            while (_segmentOrder.Count > MaxSegments)
             {
-                var oldest = segmentOrder[0];
-                segmentOrder.RemoveAt(0);
-                segments.Remove(oldest, out var removed);
+                var oldest = _segmentOrder[0];
+                _segmentOrder.RemoveAt(0);
+                _segments.Remove(oldest, out var removed);
                 removed?.Release();
             }
         }
 
         public void Release()
         {
-            lock (sync)
+            lock (_sync)
             {
-                currentSegment?.Release();
-                foreach (var segment in segments.Values)
+                _currentSegment?.Release();
+                foreach (var segment in _segments.Values)
                 {
                     segment.Release();
                 }
@@ -98,18 +98,18 @@ public sealed class VideoStreamManager
 
         public string GetPlaylist()
         {
-            lock (sync)
+            lock (_sync)
             {
-                if (currentSegment != null)
+                if (_currentSegment != null)
                 {
                     FinalizeSegment();
                 }
-                if (segmentOrder.Count == 0)
+                if (_segmentOrder.Count == 0)
                 {
                     return EmptyPlaylist;
                 }
 
-                var firstIndex = segmentOrder[0];
+                var firstIndex = _segmentOrder[0];
 
                 var sb = new StringBuilder();
                 sb.Append("#EXTM3U\n");
@@ -117,7 +117,7 @@ public sealed class VideoStreamManager
                 sb.Append("#EXT-X-TARGETDURATION:5\n");
                 sb.Append("#EXT-X-MEDIA-SEQUENCE:").Append(firstIndex).Append('\n');
 
-                foreach (var key in segmentOrder)
+                foreach (var key in _segmentOrder)
                 {
                     sb.Append("#EXTINF:3.0,\n");
                     sb.Append(key).Append(".ts\n");
@@ -129,9 +129,9 @@ public sealed class VideoStreamManager
 
         public IByteBuffer? GetSegment(int index)
         {
-            lock (sync)
+            lock (_sync)
             {
-                return segments.GetValueOrDefault(index);
+                return _segments.GetValueOrDefault(index);
             }
         }
     }

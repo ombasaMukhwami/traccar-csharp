@@ -11,17 +11,17 @@ namespace Traccar.Protocols.Session;
 public sealed class ConnectionManager(
     IDbContextFactory<TraccarDbContext> dbContextFactory, ILogger<ConnectionManager> logger)
 {
-    private readonly ConcurrentDictionary<long, DeviceSession> sessionsByDeviceId = new();
-    private readonly ConcurrentDictionary<IChannel, ConcurrentDictionary<string, DeviceSession>> sessionsByChannel = new();
+    private readonly ConcurrentDictionary<long, DeviceSession> _sessionsByDeviceId = new();
+    private readonly ConcurrentDictionary<IChannel, ConcurrentDictionary<string, DeviceSession>> _sessionsByChannel = new();
 
     public DeviceSession? GetDeviceSession(long deviceId)
-        => sessionsByDeviceId.GetValueOrDefault(deviceId);
+        => _sessionsByDeviceId.GetValueOrDefault(deviceId);
 
     public async Task<DeviceSession?> GetDeviceSessionAsync(
         IChannel channel, EndPoint? remoteAddress, params string?[] uniqueIds)
     {
         var ids = uniqueIds.Where(id => !string.IsNullOrEmpty(id)).Cast<string>().ToArray();
-        sessionsByChannel.TryGetValue(channel, out var channelSessions);
+        _sessionsByChannel.TryGetValue(channel, out var channelSessions);
 
         if (ids.Length > 0)
         {
@@ -60,20 +60,20 @@ public sealed class ConnectionManager(
             logger.LogInformation("Automatically registered {UniqueId}", ids[0]);
         }
 
-        if (sessionsByDeviceId.TryRemove(device.Id, out var oldSession)
-            && sessionsByChannel.TryGetValue(oldSession.Channel, out var oldChannelSessions))
+        if (_sessionsByDeviceId.TryRemove(device.Id, out var oldSession)
+            && _sessionsByChannel.TryGetValue(oldSession.Channel, out var oldChannelSessions))
         {
             oldChannelSessions.TryRemove(oldSession.UniqueId, out _);
             if (oldChannelSessions.IsEmpty)
             {
-                sessionsByChannel.TryRemove(oldSession.Channel, out _);
+                _sessionsByChannel.TryRemove(oldSession.Channel, out _);
             }
         }
 
         var session = new DeviceSession(device.Id, device.UniqueId, device.Model, channel, remoteAddress);
-        var newChannelSessions = sessionsByChannel.GetOrAdd(channel, _ => new ConcurrentDictionary<string, DeviceSession>());
+        var newChannelSessions = _sessionsByChannel.GetOrAdd(channel, _ => new ConcurrentDictionary<string, DeviceSession>());
         newChannelSessions[device.UniqueId] = session;
-        sessionsByDeviceId[device.Id] = session;
+        _sessionsByDeviceId[device.Id] = session;
 
         logger.LogInformation(
             "New connection from {UniqueId} at {RemoteAddress} [{ChannelId}]",
@@ -121,13 +121,13 @@ public sealed class ConnectionManager(
 
     public void DeviceDisconnected(IChannel channel)
     {
-        if (!sessionsByChannel.TryRemove(channel, out var channelSessions))
+        if (!_sessionsByChannel.TryRemove(channel, out var channelSessions))
         {
             return;
         }
         foreach (var session in channelSessions.Values)
         {
-            sessionsByDeviceId.TryRemove(session.DeviceId, out _);
+            _sessionsByDeviceId.TryRemove(session.DeviceId, out _);
             _ = UpdateDeviceStatusAsync(session.DeviceId, Device.StatusOffline, null);
         }
     }

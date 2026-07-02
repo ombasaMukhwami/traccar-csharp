@@ -22,23 +22,23 @@ public sealed class DeviceSession(
 
     public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
 
-    private readonly ConcurrentDictionary<string, object> locals = new();
+    private readonly ConcurrentDictionary<string, object> _locals = new();
 
-    public bool Contains(string key) => locals.ContainsKey(key);
+    public bool Contains(string key) => _locals.ContainsKey(key);
 
     public void Set(string key, object? value)
     {
         if (value is null)
         {
-            locals.TryRemove(key, out _);
+            _locals.TryRemove(key, out _);
         }
         else
         {
-            locals[key] = value;
+            _locals[key] = value;
         }
     }
 
-    public T? Get<T>(string key) => locals.TryGetValue(key, out var value) ? (T)value : default;
+    public T? Get<T>(string key) => _locals.TryGetValue(key, out var value) ? (T)value : default;
 
     /// <summary>
     /// Writes a command through this device's channel; the protocol's encoder (already in the

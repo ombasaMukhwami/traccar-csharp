@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Traccar.Protocols.Media;
 
 namespace Traccar.Server.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/stream")]
 public class VideoStreamController(VideoStreamManager streamManager) : ControllerBase
 {

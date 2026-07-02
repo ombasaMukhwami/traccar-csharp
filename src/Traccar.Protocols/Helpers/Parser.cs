@@ -26,32 +26,32 @@ public enum DateTimeFormat
 
 public sealed class Parser
 {
-    private readonly Match match;
-    private int position;
+    private readonly Match _match;
+    private int _position;
 
     public Parser(Regex pattern, string input)
     {
-        match = pattern.Match(input);
+        _match = pattern.Match(input);
     }
 
-    /// <summary>Wraps an already-found Match, e.g. from Regex.Matches() when iterating repeated occurrences.</summary>
+    /// <summary>Wraps an already-found match, e.g. from Regex.Matches() when iterating repeated occurrences.</summary>
     public Parser(Match match)
     {
-        this.match = match;
-        position = 1;
+        _match = match;
+        _position = 1;
     }
 
     public bool Matches()
     {
-        position = 1;
-        return match.Success;
+        _position = 1;
+        return _match.Success;
     }
 
-    public void Skip(int number) => position += number;
+    public void Skip(int number) => _position += number;
 
     /// <summary>
     /// Compiles a pattern anchored to the full input, mirroring Java's Pattern.matches() semantics
-    /// (as opposed to .NET's default partial-match behavior).
+    /// (as opposed to .NET's default partial-_match behavior).
     /// </summary>
     public static Regex Compile(string pattern, RegexOptions options = RegexOptions.Singleline)
         => new($@"\A(?:{pattern})\z", options);
@@ -60,11 +60,11 @@ public sealed class Parser
 
     public bool HasNext(int number)
     {
-        for (var i = position; i < position + number; i++)
+        for (var i = _position; i < _position + number; i++)
         {
             if (string.IsNullOrEmpty(GroupValue(i)))
             {
-                position += number;
+                _position += number;
                 return false;
             }
         }
@@ -73,24 +73,24 @@ public sealed class Parser
 
     public bool HasNextAny(int number)
     {
-        for (var i = position; i < position + number; i++)
+        for (var i = _position; i < _position + number; i++)
         {
             if (!string.IsNullOrEmpty(GroupValue(i)))
             {
                 return true;
             }
         }
-        position += number;
+        _position += number;
         return false;
     }
 
     private string? GroupValue(int index)
     {
-        var group = match.Groups[index];
+        var group = _match.Groups[index];
         return group.Success ? group.Value : null;
     }
 
-    public string? Next() => GroupValue(position++);
+    public string? Next() => GroupValue(_position++);
 
     public int? NextInt() => HasNext() ? int.Parse(Next()!, CultureInfo.InvariantCulture) : null;
 

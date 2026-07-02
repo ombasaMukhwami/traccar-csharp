@@ -11,10 +11,11 @@ namespace Traccar.Protocols.Gt06;
 public sealed class Gt06Protocol : BaseProtocol
 {
     public Gt06Protocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         SetSupportedDataCommands(Command.TypeEngineStop, Command.TypeEngineResume, Command.TypeCustom);
 

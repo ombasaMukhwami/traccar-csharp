@@ -19,16 +19,16 @@ namespace Traccar.Protocols.Teltonika;
 /// </summary>
 public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
 {
-    private readonly bool connectionless;
-    private readonly bool extended;
+    private readonly bool _connectionless;
+    private readonly bool _extended;
 
     public TeltonikaProtocolDecoder(
         ConnectionManager connectionManager, ILogger<TeltonikaProtocolDecoder> logger,
         IConfiguration configuration, bool connectionless)
         : base("teltonika", connectionManager, logger)
     {
-        this.connectionless = connectionless;
-        extended = configuration.GetValue<bool>($"Protocols:{ProtocolName}:Extended");
+        _connectionless = connectionless;
+        _extended = configuration.GetValue<bool>($"{ConfigKeys.Protocols.SectionPrefix}:{ProtocolName}:{ConfigKeys.Protocols.Extended}");
     }
 
     public const int CodecGh3000 = 0x07;
@@ -433,7 +433,7 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
         }
 
         // 16-byte parameters
-        if (extended)
+        if (_extended)
         {
             var cnt = ReadExtByte(buf, codec, Codec8Ext);
             for (var j = 0; j < cnt; j++)
@@ -685,7 +685,7 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
     {
         var positions = new List<Position>();
 
-        if (!connectionless)
+        if (!_connectionless)
         {
             buf.ReadUnsignedInt(); // data length
         }
@@ -743,7 +743,7 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
         if (codec != Codec12 && codec != Codec13)
         {
             var response = Unpooled.Buffer();
-            if (connectionless)
+            if (_connectionless)
             {
                 response.WriteShort(5);
                 response.WriteShort(0);
@@ -775,7 +775,7 @@ public sealed class TeltonikaProtocolDecoder : BaseProtocolDecoder
     protected override object? Decode(IChannel channel, EndPoint? remoteAddress, object message)
     {
         var buf = new ByteBuf((IByteBuffer)message);
-        return connectionless ? DecodeUdp(channel, remoteAddress, buf) : DecodeTcp(channel, remoteAddress, buf);
+        return _connectionless ? DecodeUdp(channel, remoteAddress, buf) : DecodeTcp(channel, remoteAddress, buf);
     }
 
     private object? DecodeTcp(IChannel channel, EndPoint? remoteAddress, ByteBuf buf)

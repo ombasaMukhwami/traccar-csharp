@@ -19,13 +19,13 @@ public sealed class Jt1078ProtocolDecoder(
     VideoStreamManager streamManager, ILogger<Jt1078ProtocolDecoder> logger)
     : BaseProtocolDecoder("jt1078", connectionManager, logger)
 {
-    private CompositeByteBuffer? frameBuffer;
-    private int frameDataType;
-    private long frameTimestamp;
-    private int framePayloadType;
+    private CompositeByteBuffer? _frameBuffer;
+    private int _frameDataType;
+    private long _frameTimestamp;
+    private int _framePayloadType;
 
-    private long streamDeviceId;
-    private int streamChannel;
+    private long _streamDeviceId;
+    private int _streamChannel;
 
     protected override object? Decode(IChannel channel, EndPoint? remoteAddress, object message)
     {
@@ -62,8 +62,8 @@ public sealed class Jt1078ProtocolDecoder(
             return null;
         }
 
-        streamDeviceId = device.Id;
-        streamChannel = videoChannel;
+        _streamDeviceId = device.Id;
+        _streamChannel = videoChannel;
 
         var body = buf.ReadRetainedSlice(bodyLength);
 
@@ -71,21 +71,21 @@ public sealed class Jt1078ProtocolDecoder(
         {
             case 0:
                 var isKeyFrame = dataType == 0;
-                streamManager.HandleFrame(streamDeviceId, videoChannel, body, timestamp, isKeyFrame, payloadType);
+                streamManager.HandleFrame(_streamDeviceId, videoChannel, body, timestamp, isKeyFrame, payloadType);
                 body.Release();
                 break;
             case 1:
-                frameBuffer?.Release();
-                frameBuffer = Unpooled.CompositeBuffer();
-                frameBuffer.AddComponent(true, body);
-                frameDataType = dataType;
-                frameTimestamp = timestamp;
-                framePayloadType = payloadType;
+                _frameBuffer?.Release();
+                _frameBuffer = Unpooled.CompositeBuffer();
+                _frameBuffer.AddComponent(true, body);
+                _frameDataType = dataType;
+                _frameTimestamp = timestamp;
+                _framePayloadType = payloadType;
                 break;
             case 3:
-                if (frameBuffer != null)
+                if (_frameBuffer != null)
                 {
-                    frameBuffer.AddComponent(true, body);
+                    _frameBuffer.AddComponent(true, body);
                 }
                 else
                 {
@@ -93,14 +93,14 @@ public sealed class Jt1078ProtocolDecoder(
                 }
                 break;
             case 2:
-                if (frameBuffer != null)
+                if (_frameBuffer != null)
                 {
-                    frameBuffer.AddComponent(true, body);
-                    var isKeyFrame2 = frameDataType == 0;
+                    _frameBuffer.AddComponent(true, body);
+                    var isKeyFrame2 = _frameDataType == 0;
                     streamManager.HandleFrame(
-                        streamDeviceId, videoChannel, frameBuffer, frameTimestamp, isKeyFrame2, framePayloadType);
-                    frameBuffer.Release();
-                    frameBuffer = null;
+                        _streamDeviceId, videoChannel, _frameBuffer, _frameTimestamp, isKeyFrame2, _framePayloadType);
+                    _frameBuffer.Release();
+                    _frameBuffer = null;
                 }
                 else
                 {
@@ -118,14 +118,14 @@ public sealed class Jt1078ProtocolDecoder(
     public override void ChannelInactive(IChannelHandlerContext context)
     {
         base.ChannelInactive(context);
-        if (streamDeviceId > 0)
+        if (_streamDeviceId > 0)
         {
-            streamManager.RemoveStream(streamDeviceId, streamChannel);
+            streamManager.RemoveStream(_streamDeviceId, _streamChannel);
         }
-        if (frameBuffer != null)
+        if (_frameBuffer != null)
         {
-            frameBuffer.Release();
-            frameBuffer = null;
+            _frameBuffer.Release();
+            _frameBuffer = null;
         }
     }
 }

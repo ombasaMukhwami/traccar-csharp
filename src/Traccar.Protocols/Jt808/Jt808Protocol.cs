@@ -11,10 +11,11 @@ namespace Traccar.Protocols.Jt808;
 public sealed class Jt808Protocol : BaseProtocol
 {
     public Jt808Protocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         SetSupportedDataCommands(
             Command.TypeCustom,

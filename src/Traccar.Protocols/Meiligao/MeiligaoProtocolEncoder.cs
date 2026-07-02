@@ -66,7 +66,7 @@ public sealed class MeiligaoProtocolEncoder(
         else
         {
             outputCount = 1;
-            var alternative = configuration.GetValue<bool>("Protocols:meiligao:Alternative");
+            var alternative = configuration.GetValue<bool>($"{ConfigKeys.Protocols.SectionPrefix}:meiligao:{ConfigKeys.Protocols.Alternative}");
             outputType = alternative ? MeiligaoProtocolDecoder.MsgOutputControl1 : MeiligaoProtocolDecoder.MsgOutputControl2;
         }
 

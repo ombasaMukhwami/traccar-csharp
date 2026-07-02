@@ -11,10 +11,11 @@ namespace Traccar.Protocols.Gl200;
 public sealed class Gl200Protocol : BaseProtocol
 {
     public Gl200Protocol(
-        IConfiguration configuration, ConnectionManager connectionManager,
+        ProtocolOptions options, IConfiguration configuration,
+        ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
         IPositionForwarder? positionForwarder = null)
-        : base(configuration, loggerFactory)
+        : base(options, loggerFactory)
     {
         SetSupportedDataCommands(
             Command.TypePositionSingle,

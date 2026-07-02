@@ -13,7 +13,7 @@ public class CellTower
         };
         if (rssi.HasValue)
         {
-            cellTower.SignalStrength = rssi;
+            cellTower._signalStrength = rssi;
         }
         return cellTower;
     }
@@ -28,12 +28,12 @@ public class CellTower
 
     public int? MobileNetworkCode { get; set; }
 
-    private int? signalStrength;
+    private int? _signalStrength;
 
     public int? SignalStrength
     {
-        get => signalStrength;
-        set => signalStrength = value is > 0 ? -value : value;
+        get => _signalStrength;
+        set => _signalStrength = value is > 0 ? -value : value;
     }
 
     public void SetOperator(long operatorValue)
