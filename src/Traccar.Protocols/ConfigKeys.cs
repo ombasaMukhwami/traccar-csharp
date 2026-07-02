@@ -73,6 +73,16 @@ public static class ConfigKeys
         public const string WebUrl = "Server:WebUrl";
     }
 
+    /// <summary>"Database:*" section — RDBMS provider selection.</summary>
+    public static class Database
+    {
+        /// <summary>
+        /// Active database provider. Supported values: "sqlite" (default), "postgresql",
+        /// "mysql", "mariadb", "sqlserver". Case-insensitive.
+        /// </summary>
+        public const string Provider = "Database:Provider";
+    }
+
     /// <summary>"Admin:*" section — bootstrap administrator credentials.</summary>
     public static class Admin
     {

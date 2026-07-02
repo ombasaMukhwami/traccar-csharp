@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Traccar.Server;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
@@ -11,11 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
-// Default Timeout sets SQLite's busy-wait (in seconds) so concurrent writers from the protocol
-// pipeline (device status updates, position saves) retry instead of failing immediately on lock contention.
-var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=traccar.db;Default Timeout=5";
-builder.Services.AddDbContextFactory<TraccarDbContext>(options => options.UseSqlite(connectionString));
-builder.Services.AddScoped<TraccarDbContext>(sp => sp.GetRequiredService<IDbContextFactory<TraccarDbContext>>().CreateDbContext());
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Data Source=traccar.db;Default Timeout=5";
+
+var provider = (builder.Configuration[ConfigKeys.Database.Provider] ?? "sqlite").ToLowerInvariant();
+
+builder.Services.AddDbContextFactory<TraccarDbContext>(options =>
+    DbProviderExtensions.UseProvider(options, provider, connectionString));
+
+builder.Services.AddScoped<TraccarDbContext>(sp =>
+    sp.GetRequiredService<IDbContextFactory<TraccarDbContext>>().CreateDbContext());
 
 builder.Services.AddTraccarProtocols(builder.Configuration);
 
@@ -45,8 +51,6 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi(options =>
 {
     // Scalar needs operationId on every operation to generate client code snippets.
-    // ASP.NET Core's AddOpenApi() leaves it empty by default, so we derive it from
-    // the controller and action names: e.g. "Devices_GetById", "Session_Login".
     options.AddOperationTransformer((operation, context, ct) =>
     {
         if (context.Description.ActionDescriptor is ControllerActionDescriptor cad)
