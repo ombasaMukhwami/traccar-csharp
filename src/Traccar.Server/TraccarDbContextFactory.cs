@@ -27,8 +27,10 @@ public class TraccarDbContextFactory : IDesignTimeDbContextFactory<TraccarDbCont
 
         var provider = (config[ConfigKeys.Database.Provider] ?? "sqlite").ToLowerInvariant();
 
+        var retry = config.GetSection("Database:Retry").Get<DatabaseRetryOptions>() ?? new DatabaseRetryOptions();
+
         var optionsBuilder = new DbContextOptionsBuilder<TraccarDbContext>();
-        DbProviderExtensions.UseProvider(optionsBuilder, provider, connectionString);
+        DbProviderExtensions.UseProvider(optionsBuilder, provider, connectionString, retry);
 
         return new TraccarDbContext(optionsBuilder.Options);
     }

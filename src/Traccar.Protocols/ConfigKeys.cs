@@ -73,7 +73,7 @@ public static class ConfigKeys
         public const string WebUrl = "Server:WebUrl";
     }
 
-    /// <summary>"Database:*" section — RDBMS provider selection.</summary>
+    /// <summary>"Database:*" section — RDBMS provider selection and connection behaviour.</summary>
     public static class Database
     {
         /// <summary>
@@ -81,6 +81,15 @@ public static class ConfigKeys
         /// "mysql", "mariadb", "sqlserver". Case-insensitive.
         /// </summary>
         public const string Provider = "Database:Provider";
+
+        /// <summary>"Database:Retry:*" sub-section — transient-fault retry settings.</summary>
+        public static class Retry
+        {
+            public const string Enable = "Database:Retry:Enable";
+            public const string MaxRetryCount = "Database:Retry:MaxRetryCount";
+            public const string MaxRetryDelaySeconds = "Database:Retry:MaxRetryDelaySeconds";
+            public const string CommandTimeoutSeconds = "Database:Retry:CommandTimeoutSeconds";
+        }
     }
 
     /// <summary>"Admin:*" section — bootstrap administrator credentials.</summary>

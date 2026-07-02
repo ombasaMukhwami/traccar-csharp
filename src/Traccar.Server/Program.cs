@@ -17,8 +17,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 var provider = (builder.Configuration[ConfigKeys.Database.Provider] ?? "sqlite").ToLowerInvariant();
 
+var retry = builder.Configuration.GetSection("Database:Retry").Get<DatabaseRetryOptions>() ?? new DatabaseRetryOptions();
+
 builder.Services.AddDbContextFactory<TraccarDbContext>(options =>
-    DbProviderExtensions.UseProvider(options, provider, connectionString));
+    DbProviderExtensions.UseProvider(options, provider, connectionString, retry));
 
 builder.Services.AddScoped<TraccarDbContext>(sp =>
     sp.GetRequiredService<IDbContextFactory<TraccarDbContext>>().CreateDbContext());
