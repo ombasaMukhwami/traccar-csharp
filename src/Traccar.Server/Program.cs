@@ -6,6 +6,7 @@ using Scalar.AspNetCore;
 using Serilog;
 using Traccar.Model;
 using Traccar.Protocols;
+using Traccar.Server.Reports;
 using Traccar.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,12 @@ builder.Services.AddScoped<TraccarDbContext>(sp =>
     sp.GetRequiredService<IDbContextFactory<TraccarDbContext>>().CreateDbContext());
 
 builder.Services.AddTraccarProtocols(builder.Configuration);
+
+builder.Services.AddScoped<ReportUtils>();
+builder.Services.AddScoped<TripsReportProvider>();
+builder.Services.AddScoped<StopsReportProvider>();
+builder.Services.AddScoped<SummaryReportProvider>();
+builder.Services.AddScoped<DevicesReportProvider>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

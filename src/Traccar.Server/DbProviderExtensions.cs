@@ -6,6 +6,8 @@ namespace Traccar.Server;
 /// <summary>
 /// Maps the Database:Provider config value to the correct EF Core provider call.
 /// Supported values (case-insensitive): sqlite, postgresql, postgres, mysql, mariadb, sqlserver, mssql.
+/// Each provider routes migrations to its own dedicated assembly so migrations use
+/// native types for that provider (no cross-provider type conversion patches needed).
 /// </summary>
 public static class DbProviderExtensions
 {
@@ -22,7 +24,7 @@ public static class DbProviderExtensions
         {
             "postgresql" or "postgres" => options.UseNpgsql(connectionString, o =>
             {
-                o.MigrationsAssembly("Traccar.Storage");
+                o.MigrationsAssembly("Traccar.Storage.Migrations.PostgreSQL");
                 if (retry.Enable)
                     o.EnableRetryOnFailure(
                         maxRetryCount: retry.MaxRetryCount,
@@ -34,7 +36,7 @@ public static class DbProviderExtensions
 
             "mysql" or "mariadb" => options.UseMySQL(connectionString, o =>
             {
-                o.MigrationsAssembly("Traccar.Storage");
+                o.MigrationsAssembly("Traccar.Storage.Migrations.MySQL");
                 if (retry.Enable)
                     o.EnableRetryOnFailure(
                         maxRetryCount: retry.MaxRetryCount,
@@ -46,7 +48,7 @@ public static class DbProviderExtensions
 
             "sqlserver" or "mssql" => options.UseSqlServer(connectionString, o =>
             {
-                o.MigrationsAssembly("Traccar.Storage");
+                o.MigrationsAssembly("Traccar.Storage.Migrations.SqlServer");
                 if (retry.Enable)
                     o.EnableRetryOnFailure(
                         maxRetryCount: retry.MaxRetryCount,
@@ -58,9 +60,8 @@ public static class DbProviderExtensions
 
             _ => options.UseSqlite(connectionString, o =>   // sqlite (default)
             {
-                o.MigrationsAssembly("Traccar.Storage");
-                // SQLite is file-based and has no transient network errors; EnableRetryOnFailure
-                // is intentionally not available on SqliteDbContextOptionsBuilder.
+                o.MigrationsAssembly("Traccar.Storage.Migrations.Sqlite");
+                // SQLite is file-based; EnableRetryOnFailure is not available on SqliteDbContextOptionsBuilder.
                 if (retry.CommandTimeoutSeconds.HasValue)
                     o.CommandTimeout(retry.CommandTimeoutSeconds.Value);
             }),

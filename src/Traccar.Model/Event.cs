@@ -10,6 +10,8 @@ public class Event : Message
     public const string TypeAlarm = "alarm";
     public const string TypeIgnitionOn = "ignitionOn";
     public const string TypeIgnitionOff = "ignitionOff";
+    public const string TypeDeviceMoving = "deviceMoving";
+    public const string TypeDeviceStopped = "deviceStopped";
 
     public Event() { }
 

@@ -99,6 +99,41 @@ public static class ConfigKeys
         public const string Password = "Admin:Password";
     }
 
+    /// <summary>"Report:*" section — report generation settings.</summary>
+    public static class Report
+    {
+        /// <summary>Max allowed report period in seconds. 0 = no limit (default).</summary>
+        public const string PeriodLimit = "Report:PeriodLimit";
+
+        /// <summary>
+        /// Periods longer than this (seconds) use the fast (event-based) algorithm instead of
+        /// replaying every position. Default: 86400 (1 day).
+        /// </summary>
+        public const string FastThreshold = "Report:FastThreshold";
+
+        /// <summary>Trip/stop detection thresholds.</summary>
+        public static class Trip
+        {
+            /// <summary>Minimum distance (metres) for a movement to count as a trip. Default: 500.</summary>
+            public const string MinimalDistance = "Report:Trip:MinimalDistance";
+
+            /// <summary>Minimum duration (seconds) for a movement to count as a trip. Default: 300.</summary>
+            public const string MinimalDuration = "Report:Trip:MinimalDuration";
+
+            /// <summary>Minimum parking duration (seconds) before a stop is confirmed. Default: 300.</summary>
+            public const string MinimalParking = "Report:Trip:MinimalParking";
+
+            /// <summary>Gap longer than this (seconds) is treated as a stop regardless of motion flag. Default: 3600.</summary>
+            public const string MinimalNoData = "Report:Trip:MinimalNoData";
+
+            /// <summary>Use the ignition attribute to confirm trip start/end. Default: false.</summary>
+            public const string UseIgnition = "Report:Trip:UseIgnition";
+
+            /// <summary>Ignore device odometer; use server-calculated total distance instead. Default: false.</summary>
+            public const string IgnoreOdometer = "Report:Trip:IgnoreOdometer";
+        }
+    }
+
     /// <summary>Authentication / authorisation constants shared between Program.cs and controllers.</summary>
     public static class Auth
     {

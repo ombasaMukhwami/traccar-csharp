@@ -2,20 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Traccar.Storage;
 
 #nullable disable
 
-namespace Traccar.Storage.Migrations
+namespace Traccar.Storage.Migrations.Sqlite.Migrations
 {
     [DbContext(typeof(TraccarDbContext))]
-    [Migration("20260630153832_AddCommands")]
-    partial class AddCommands
+    partial class TraccarDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -164,6 +161,19 @@ namespace Traccar.Storage.Migrations
                     b.ToTable("tc_groups", (string)null);
                 });
 
+            modelBuilder.Entity("Traccar.Model.GroupDevice", b =>
+                {
+                    b.Property<long>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DeviceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("GroupId", "DeviceId");
+
+                    b.ToTable("tc_group_device", (string)null);
+                });
+
             modelBuilder.Entity("Traccar.Model.Position", b =>
                 {
                     b.Property<long>("Id")
@@ -276,6 +286,32 @@ namespace Traccar.Storage.Migrations
                         .IsUnique();
 
                     b.ToTable("tc_users", (string)null);
+                });
+
+            modelBuilder.Entity("Traccar.Model.UserDevice", b =>
+                {
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("DeviceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "DeviceId");
+
+                    b.ToTable("tc_user_device", (string)null);
+                });
+
+            modelBuilder.Entity("Traccar.Model.UserGroup", b =>
+                {
+                    b.Property<long>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId", "GroupId");
+
+                    b.ToTable("tc_user_group", (string)null);
                 });
 #pragma warning restore 612, 618
         }

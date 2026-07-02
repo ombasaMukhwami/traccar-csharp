@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Traccar.Storage.Migrations
+namespace Traccar.Storage.Migrations.Sqlite.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -11,6 +11,23 @@ namespace Traccar.Storage.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "tc_commands",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    TextChannel = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Description = table.Column<string>(type: "TEXT", nullable: true),
+                    Attributes = table.Column<string>(type: "TEXT", nullable: false),
+                    DeviceId = table.Column<long>(type: "INTEGER", nullable: false),
+                    Type = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_tc_commands", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "tc_devices",
                 columns: table => new
@@ -54,6 +71,18 @@ namespace Traccar.Storage.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_tc_events", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "tc_group_device",
+                columns: table => new
+                {
+                    GroupId = table.Column<long>(type: "INTEGER", nullable: false),
+                    DeviceId = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_tc_group_device", x => new { x.GroupId, x.DeviceId });
                 });
 
             migrationBuilder.CreateTable(
@@ -102,6 +131,30 @@ namespace Traccar.Storage.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "tc_user_device",
+                columns: table => new
+                {
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false),
+                    DeviceId = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_tc_user_device", x => new { x.UserId, x.DeviceId });
+                });
+
+            migrationBuilder.CreateTable(
+                name: "tc_user_group",
+                columns: table => new
+                {
+                    UserId = table.Column<long>(type: "INTEGER", nullable: false),
+                    GroupId = table.Column<long>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_tc_user_group", x => new { x.UserId, x.GroupId });
+                });
+
+            migrationBuilder.CreateTable(
                 name: "tc_users",
                 columns: table => new
                 {
@@ -122,6 +175,11 @@ namespace Traccar.Storage.Migrations
                 {
                     table.PrimaryKey("PK_tc_users", x => x.Id);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_tc_commands_DeviceId",
+                table: "tc_commands",
+                column: "DeviceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_tc_devices_UniqueId",
@@ -150,16 +208,28 @@ namespace Traccar.Storage.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "tc_commands");
+
+            migrationBuilder.DropTable(
                 name: "tc_devices");
 
             migrationBuilder.DropTable(
                 name: "tc_events");
 
             migrationBuilder.DropTable(
+                name: "tc_group_device");
+
+            migrationBuilder.DropTable(
                 name: "tc_groups");
 
             migrationBuilder.DropTable(
                 name: "tc_positions");
+
+            migrationBuilder.DropTable(
+                name: "tc_user_device");
+
+            migrationBuilder.DropTable(
+                name: "tc_user_group");
 
             migrationBuilder.DropTable(
                 name: "tc_users");
