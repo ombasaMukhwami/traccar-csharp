@@ -12,6 +12,9 @@ public class Event : Message
     public const string TypeIgnitionOff = "ignitionOff";
     public const string TypeDeviceMoving = "deviceMoving";
     public const string TypeDeviceStopped = "deviceStopped";
+    public const string TypeProximityEnter = "proximityEnter";
+    public const string TypeProximityExit = "proximityExit";
+    public const string TypeUnaccompaniedMotion = "unaccompaniedMotion";
 
     public Event() { }
 

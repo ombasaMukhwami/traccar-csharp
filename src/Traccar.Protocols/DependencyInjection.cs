@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Traccar.Protocols.Forward;
+using Traccar.Protocols.Geocoder;
 using Traccar.Protocols.Media;
 using Traccar.Protocols.Session;
 
@@ -24,6 +25,9 @@ public static class DependencyInjection
             case ConfigKeys.Forward.TypeRabbitMq:
                 services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderRabbitMq(configuration));
                 break;
+            case ConfigKeys.Forward.TypeSignalR:
+                services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderSignalR(configuration));
+                break;
         }
 
         return services;
@@ -41,12 +45,35 @@ public static class DependencyInjection
     ///      passes it to ActivatorUtilities.CreateInstance — so constructors receive ProtocolOptions
     ///      directly rather than IOptionsMonitor.
     /// </summary>
+    /// <summary>
+    /// Registers the geocoder selected by Geocoder:Type. Only "nominatim" is supported;
+    /// if Geocoder:Type is unset or unknown, no geocoder is registered and GeocoderHandler is skipped.
+    /// </summary>
+    public static IServiceCollection AddTraccarGeocoder(this IServiceCollection services, IConfiguration configuration)
+    {
+        if (string.Equals(configuration[ConfigKeys.Geocoder.Type], "nominatim", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IGeocoderService>(sp =>
+            {
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Traccar/6.0 (https://www.traccar.org)");
+                client.Timeout = TimeSpan.FromSeconds(30);
+                var config = sp.GetRequiredService<IConfiguration>();
+                return new NominatimGeocoder(client, config);
+            });
+        }
+
+        return services;
+    }
+
     public static IServiceCollection AddTraccarProtocols(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<ConnectionManager>();
+        services.AddSingleton<PositionCache>();
         services.AddSingleton<DeviceLookupService>();
         services.AddSingleton<VideoStreamManager>();
         services.AddTraccarPositionForwarding(configuration);
+        services.AddTraccarGeocoder(configuration);
 
         HashSet<string>? enabledProtocols = null;
         var enableList = configuration[ConfigKeys.Protocols.Enable];

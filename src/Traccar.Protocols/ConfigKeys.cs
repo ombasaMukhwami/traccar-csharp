@@ -50,8 +50,14 @@ public static class ConfigKeys
         /// <summary>Value for <see cref="Type"/> that selects the RabbitMQ/AMQP forwarder.</summary>
         public const string TypeRabbitMq = "rabbitmq";
 
+        /// <summary>Value for <see cref="Type"/> that selects the SignalR hub forwarder.</summary>
+        public const string TypeSignalR = "signalr";
+
         /// <summary>Default topic/routing-key when <see cref="Topic"/> is not configured.</summary>
         public const string DefaultTopic = "positions";
+
+        /// <summary>Default SignalR hub method name when <see cref="Topic"/> is not configured.</summary>
+        public const string DefaultSignalRMethod = "PositionReceived";
 
         /// <summary>Default RabbitMQ exchange when <see cref="Exchange"/> is not configured.</summary>
         public const string DefaultExchange = "traccar";
@@ -132,6 +138,136 @@ public static class ConfigKeys
             /// <summary>Ignore device odometer; use server-calculated total distance instead. Default: false.</summary>
             public const string IgnoreOdometer = "Report:Trip:IgnoreOdometer";
         }
+    }
+
+    /// <summary>"Filter:*" section — position filtering settings.</summary>
+    public static class Filter
+    {
+        public const string Invalid = "Filter:Invalid";
+        public const string Zero = "Filter:Zero";
+        public const string Duplicate = "Filter:Duplicate";
+        public const string Outdated = "Filter:Outdated";
+        /// <summary>Seconds ahead of now; positions further in the future are dropped.</summary>
+        public const string Future = "Filter:Future";
+        /// <summary>Seconds behind now; positions older than this are dropped.</summary>
+        public const string Past = "Filter:Past";
+        /// <summary>Accuracy threshold in metres; positions less accurate are dropped.</summary>
+        public const string Accuracy = "Filter:Accuracy";
+        public const string Approximate = "Filter:Approximate";
+        /// <summary>Drop positions where speed == 0.</summary>
+        public const string Static = "Filter:Static";
+        /// <summary>Minimum moved distance in metres between consecutive positions.</summary>
+        public const string Distance = "Filter:Distance";
+        /// <summary>Maximum plausible speed in knots; positions implying higher speed are dropped.</summary>
+        public const string MaxSpeed = "Filter:MaxSpeed";
+        /// <summary>Minimum time in seconds between consecutive positions.</summary>
+        public const string MinPeriod = "Filter:MinPeriod";
+        /// <summary>Seconds of server silence after which excessive-data filters are bypassed.</summary>
+        public const string SkipLimit = "Filter:SkipLimit";
+        /// <summary>Comma/space-separated attribute names; filter is bypassed if any value changed.</summary>
+        public const string SkipAttributes = "Filter:SkipAttributes";
+    }
+
+    /// <summary>"Events:*" section — event detection thresholds.</summary>
+    public static class Events
+    {
+        /// <summary>
+        /// When true, suppress duplicate alarm events if the previous position carried the same
+        /// alarm value. Mirrors Java's Keys.EVENT_IGNORE_DUPLICATE_ALERTS. Default false.
+        /// </summary>
+        public const string IgnoreDuplicateAlerts = "Events:IgnoreDuplicateAlerts";
+
+        /// <summary>"Events:Motion:*" — motion detection settings.</summary>
+        public static class Motion
+        {
+            /// <summary>Speed threshold in knots below which the device is considered stationary. Default 0.01.</summary>
+            public const string SpeedThreshold = "Events:Motion:SpeedThreshold";
+        }
+    }
+
+    /// <summary>"Processing:*" section — position enrichment pipeline settings.</summary>
+    public static class Processing
+    {
+        /// <summary>
+        /// Comma- or space-separated attribute keys to propagate from the previous position when
+        /// the current position does not include them. E.g. "odometer,hours".
+        /// </summary>
+        public const string CopyAttributes = "Processing:CopyAttributes";
+
+        /// <summary>
+        /// When true, per-device computed attributes also expose the device's own attribute
+        /// dictionary as top-level variables in the NCalc context.
+        /// </summary>
+        public const string ComputedAttributesDeviceAttributes = "Processing:ComputedAttributes:DeviceAttributes";
+
+        /// <summary>
+        /// When true, the previous position's fields are exposed as "lastX" variables in the
+        /// NCalc context (e.g. "lastSpeed", "lastOdometer").
+        /// </summary>
+        public const string ComputedAttributesLastAttributes = "Processing:ComputedAttributes:LastAttributes";
+    }
+
+    /// <summary>"Coordinates:*" section — GPS anti-jitter filter settings.</summary>
+    public static class Coordinates
+    {
+        /// <summary>Enable the coordinate anti-jitter filter. Default false.</summary>
+        public const string Filter = "Coordinates:Filter";
+
+        /// <summary>
+        /// Minimum plausible movement in metres. Positions that moved less than this from the
+        /// previous fix are replaced with the previous fix's coordinates. 0 = disabled.
+        /// </summary>
+        public const string MinError = "Coordinates:MinError";
+
+        /// <summary>
+        /// Maximum plausible single-step distance in metres. Positions that jumped further than
+        /// this are replaced with the previous fix. 0 = disabled.
+        /// </summary>
+        public const string MaxError = "Coordinates:MaxError";
+    }
+
+    /// <summary>"Geocoder:*" section — reverse geocoding settings.</summary>
+    public static class Geocoder
+    {
+        /// <summary>Geocoder backend type. Currently only "nominatim" is supported.</summary>
+        public const string Type = "Geocoder:Type";
+
+        /// <summary>Override the geocoder API URL (defaults to the official Nominatim endpoint).</summary>
+        public const string Url = "Geocoder:Url";
+
+        /// <summary>API key for geocoders that require one (not needed for Nominatim).</summary>
+        public const string Key = "Geocoder:Key";
+
+        /// <summary>Preferred language for address results (BCP 47 tag, e.g. "en").</summary>
+        public const string Language = "Geocoder:Language";
+
+        /// <summary>Maximum number of geocoded addresses to cache in memory. Default 512.</summary>
+        public const string CacheSize = "Geocoder:CacheSize";
+
+        /// <summary>
+        /// If the device has moved less than this many metres since the last geocoded position,
+        /// reuse the cached address instead of making an HTTP call. Default 0 (always geocode).
+        /// </summary>
+        public const string ReuseDistance = "Geocoder:ReuseDistance";
+
+        /// <summary>
+        /// When true, skip geocoding for positions whose coordinates are not valid GPS fixes
+        /// (e.g. positions filled in by OutdatedHandler from the last known position). Default false.
+        /// </summary>
+        public const string IgnorePositions = "Geocoder:IgnorePositions";
+
+        /// <summary>Address format pattern (e.g. "%h %r, %t, %s, %c"). Default: "%h %r, %t, %s, %c".</summary>
+        public const string Format = "Geocoder:Format";
+    }
+
+    /// <summary>"Logger:*" section — protocol data logging settings.</summary>
+    public static class Logger
+    {
+        /// <summary>
+        /// When false, raw protocol frames are always logged as hex. When true (default), printable
+        /// ASCII payloads are decoded to text; binary payloads are hex-dumped.
+        /// </summary>
+        public const string TextProtocol = "Logger:TextProtocol";
     }
 
     /// <summary>Authentication / authorisation constants shared between Program.cs and controllers.</summary>

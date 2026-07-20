@@ -1,17 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Traccar.Model;
 using Traccar.Protocols.Forward;
 using Traccar.Protocols.Geocoder;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
-namespace Traccar.Protocols.Jt808;
+namespace Traccar.Protocols.Starcom;
 
-public sealed class Jt808Protocol : BaseProtocol
+public sealed class StarcomProtocol : BaseProtocol
 {
-    public Jt808Protocol(
+    public StarcomProtocol(
         ProtocolOptions options, IConfiguration configuration,
         ConnectionManager connectionManager,
         IDbContextFactory<TraccarDbContext> dbContextFactory,
@@ -20,25 +19,12 @@ public sealed class Jt808Protocol : BaseProtocol
         IPositionForwarder? positionForwarder = null)
         : base(options, configuration, dbContextFactory, positionCache, geocoderService, positionForwarder, loggerFactory)
     {
-        SetSupportedDataCommands(
-            Command.TypeCustom,
-            Command.TypeRebootDevice,
-            Command.TypePositionPeriodic,
-            Command.TypeAlarmArm,
-            Command.TypeAlarmDisarm,
-            Command.TypeEngineStop,
-            Command.TypeEngineResume,
-            Command.TypeVideoStart,
-            Command.TypeVideoStop);
-
         AddPositionServer(pipeline =>
         {
-            pipeline.AddLast(new Jt808FrameEncoder());
-            pipeline.AddLast(new Jt808FrameDecoder());
+            pipeline.AddLast(new StarcomFrameDecoder());
             pipeline.AddLast(new ConnectionTrackingHandler(connectionManager, loggerFactory.CreateLogger<ConnectionTrackingHandler>()));
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
-            pipeline.AddLast(new Jt808ProtocolEncoder(configuration, dbContextFactory, loggerFactory.CreateLogger<Jt808ProtocolEncoder>()));
-            pipeline.AddLast(new Jt808ProtocolDecoder(connectionManager, configuration, loggerFactory.CreateLogger<Jt808ProtocolDecoder>()));
+            pipeline.AddLast(new StarcomProtocolDecoder(connectionManager, loggerFactory.CreateLogger<StarcomProtocolDecoder>()));
         });
     }
 }

@@ -23,6 +23,10 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
     public DbSet<GroupDevice> GroupDevices => Set<GroupDevice>();
 
+    public DbSet<DeviceAttribute> DeviceAttributes => Set<DeviceAttribute>();
+
+    public DbSet<EventType> EventTypes => Set<EventType>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Device>(entity =>
@@ -92,6 +96,24 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
         {
             entity.ToTable("tc_group_device");
             entity.HasKey(e => new { e.GroupId, e.DeviceId });
+        });
+
+        modelBuilder.Entity<DeviceAttribute>(entity =>
+        {
+            entity.ToTable("tc_attributes");
+            entity.Property(e => e.Attributes)
+                .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
+            entity.HasIndex(e => e.DeviceId);
+        });
+
+        modelBuilder.Entity<EventType>(entity =>
+        {
+            entity.ToTable("tc_event_types");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.Name).HasMaxLength(64);
+            entity.Property(e => e.Description).HasMaxLength(256);
+            entity.HasData(EventType.All);
         });
     }
 }

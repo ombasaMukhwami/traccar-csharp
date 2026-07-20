@@ -11,9 +11,16 @@ namespace Traccar.Protocols;
 /// <summary>
 /// Logs every raw message in both directions, mirroring Java's StandardLoggingHandler. Printable
 /// payloads are logged as text (line breaks escaped); everything else is hex-dumped.
+/// For media-heavy protocols (jt1078) logging is capped at 50 frames to avoid flooding the log.
 /// </summary>
 public sealed class RawDataLoggingHandler(string protocolName, ILogger logger) : ChannelHandlerAdapter
 {
+    // jt1078 carries continuous A/V stream frames — cap at 50 to avoid log flooding.
+    private readonly int _logLimit =
+        string.Equals(protocolName, "jt1078", StringComparison.OrdinalIgnoreCase) ? 50 : 0;
+
+    private int _count;
+
     public override void ChannelRead(IChannelHandlerContext context, object message)
     {
         Log(context, received: true, message);
@@ -28,6 +35,9 @@ public sealed class RawDataLoggingHandler(string protocolName, ILogger logger) :
 
     private void Log(IChannelHandlerContext context, bool received, object message)
     {
+        if (_logLimit > 0 && _count >= _logLimit) return;
+        _count++;
+
         IByteBuffer buffer;
         EndPoint? remoteAddress;
         switch (message)

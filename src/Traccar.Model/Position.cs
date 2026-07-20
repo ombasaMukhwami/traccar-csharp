@@ -1,6 +1,6 @@
 namespace Traccar.Model;
 
-public class Position : Message
+public partial class Position : Message
 {
     public const string KeyOriginal = "raw";
     public const string KeyIndex = "index";
@@ -194,6 +194,21 @@ public class Position : Message
     public Network? Network { get; set; }
 
     public List<long>? GeofenceIds { get; set; }
+
+    /// <summary>Extracted from the <see cref="KeyIgnition"/> attribute before persistence.</summary>
+    public bool Ignition { get; set; }
+
+    /// <summary>
+    /// Id of the matching <see cref="EventType"/> for the first alarm in <see cref="KeyAlarm"/>.
+    /// Zero when no alarm is set or the alarm name is not in the known set.
+    /// </summary>
+    public int EventId { get; set; }
+
+    /// <summary>
+    /// Device-reported odometer (<see cref="KeyOdometer"/>) when present; otherwise the
+    /// server-calculated accumulated trip distance (<see cref="KeyTotalDistance"/>).
+    /// </summary>
+    public double Odometer { get; set; }
 
     public void AddAlarm(string? alarm)
     {

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Protocols.Forward;
+using Traccar.Protocols.Geocoder;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -12,29 +13,24 @@ public sealed class GoSafeProtocol : BaseProtocol
     public GoSafeProtocol(
         ProtocolOptions options, IConfiguration configuration,
         ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IDbContextFactory<TraccarDbContext> dbContextFactory,
+        PositionCache positionCache, ILoggerFactory loggerFactory,
+        IGeocoderService? geocoderService = null,
         IPositionForwarder? positionForwarder = null)
-        : base(options, loggerFactory)
+        : base(options, configuration, dbContextFactory, positionCache, geocoderService, positionForwarder, loggerFactory)
     {
-        // GoSafe has no protocol encoder in Java either - no data commands are supported.
-        AddServer(pipeline =>
+        AddPositionServer(pipeline =>
         {
             pipeline.AddLast(new GoSafeFrameDecoder());
             pipeline.AddLast(new ConnectionTrackingHandler(connectionManager, loggerFactory.CreateLogger<ConnectionTrackingHandler>()));
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new GoSafeProtocolDecoder(connectionManager, loggerFactory.CreateLogger<GoSafeProtocolDecoder>()));
-            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
-            pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
 
-        // UDP datagrams arrive already framed (one packet = one message), so there's no frame
-        // decoder, and connections aren't tracked since UDP has no per-device socket to close.
-        AddServer(datagram: true, pipeline =>
+        AddPositionServer(datagram: true, pipeline =>
         {
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new GoSafeProtocolDecoder(connectionManager, loggerFactory.CreateLogger<GoSafeProtocolDecoder>()));
-            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
-            pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }
 }

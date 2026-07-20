@@ -5,6 +5,7 @@ using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Microsoft.Extensions.Logging;
+using Traccar.Protocols.Handlers;
 
 namespace Traccar.Protocols;
 
@@ -61,6 +62,7 @@ public sealed class ProtocolServer(
                         pipeline.AddLast(new IdleStateHandler(timeoutSeconds, 0, 0));
                         pipeline.AddLast(new IdleDisconnectHandler());
                     }
+                    pipeline.AddLast(new AcknowledgementHandler());
                     configurePipeline(pipeline);
                 }));
 

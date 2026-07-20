@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
 using Traccar.Protocols.Forward;
+using Traccar.Protocols.Geocoder;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
 
@@ -13,9 +14,11 @@ public sealed class Gl200Protocol : BaseProtocol
     public Gl200Protocol(
         ProtocolOptions options, IConfiguration configuration,
         ConnectionManager connectionManager,
-        IDbContextFactory<TraccarDbContext> dbContextFactory, ILoggerFactory loggerFactory,
+        IDbContextFactory<TraccarDbContext> dbContextFactory,
+        PositionCache positionCache, ILoggerFactory loggerFactory,
+        IGeocoderService? geocoderService = null,
         IPositionForwarder? positionForwarder = null)
-        : base(options, loggerFactory)
+        : base(options, configuration, dbContextFactory, positionCache, geocoderService, positionForwarder, loggerFactory)
     {
         SetSupportedDataCommands(
             Command.TypePositionSingle,
@@ -24,7 +27,7 @@ public sealed class Gl200Protocol : BaseProtocol
             Command.TypeIdentification,
             Command.TypeRebootDevice);
 
-        AddServer(pipeline =>
+        AddPositionServer(pipeline =>
         {
             pipeline.AddLast(new Gl200FrameDecoder());
             pipeline.AddLast(new StringEncoderHandler());
@@ -32,20 +35,14 @@ public sealed class Gl200Protocol : BaseProtocol
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new Gl200ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<Gl200ProtocolEncoder>()));
             pipeline.AddLast(new Gl200ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<Gl200ProtocolDecoder>()));
-            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
-            pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
 
-        // UDP datagrams arrive already framed (one packet = one message), so there's no frame
-        // decoder, and connections aren't tracked since UDP has no per-device socket to close.
-        AddServer(datagram: true, pipeline =>
+        AddPositionServer(datagram: true, pipeline =>
         {
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new StringEncoderHandler());
             pipeline.AddLast(new Gl200ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<Gl200ProtocolEncoder>()));
             pipeline.AddLast(new Gl200ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<Gl200ProtocolDecoder>()));
-            pipeline.AddLast(new PositionForwardingHandler(positionForwarder, dbContextFactory, configuration, loggerFactory.CreateLogger<PositionForwardingHandler>()));
-            pipeline.AddLast(new PositionPersistHandler(dbContextFactory, loggerFactory.CreateLogger<PositionPersistHandler>()));
         });
     }
 }
