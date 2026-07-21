@@ -11,12 +11,19 @@ namespace Traccar.Protocols.Session;
 /// </summary>
 public sealed class DeviceLookupService(IDbContextFactory<TraccarDbContext> dbContextFactory)
 {
-    public async Task<Device?> LookupAsync(params string[] uniqueIds)
+    /// <summary>
+    /// Deliberately synchronous — its sole caller (Jt1078ProtocolDecoder) blocks on this from a
+    /// DotNetty I/O thread, and blocking on an async Task from within DotNetty's own
+    /// SingleThreadEventExecutor deadlocks (the continuation is scheduled back onto the very
+    /// thread that's blocked waiting for it). See ConnectionManager.GetDeviceSession for the same
+    /// fix applied to the equivalent hot path.
+    /// </summary>
+    public Device? Lookup(params string[] uniqueIds)
     {
-        await using var db = await dbContextFactory.CreateDbContextAsync();
+        using var db = dbContextFactory.CreateDbContext();
         foreach (var uniqueId in uniqueIds)
         {
-            var device = await db.Devices.FirstOrDefaultAsync(d => d.UniqueId == uniqueId);
+            var device = db.Devices.FirstOrDefault(d => d.UniqueId == uniqueId);
             if (device != null)
             {
                 return device;

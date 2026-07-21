@@ -17,9 +17,9 @@ public sealed class ComputedAttributesHandler(
     bool early,
     ILogger<ComputedAttributesHandler> logger)
 {
-    public async ValueTask ProcessAsync(Position position, Position? last)
+    public void Process(Position position, Position? last)
     {
-        var attributes = await cache.GetAsync(position.DeviceId);
+        var attributes = cache.Get(position.DeviceId);
 
         var filtered = attributes
             .Where(a => (a.Priority < 0) == early)

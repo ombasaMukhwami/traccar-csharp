@@ -56,7 +56,7 @@ public sealed class Jt1078ProtocolDecoder(
             return null;
         }
 
-        var device = deviceLookupService.LookupAsync(uniqueId).GetAwaiter().GetResult();
+        var device = deviceLookupService.Lookup(uniqueId);
         if (device == null)
         {
             return null;

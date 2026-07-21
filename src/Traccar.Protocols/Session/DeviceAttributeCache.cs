@@ -15,15 +15,22 @@ public sealed class DeviceAttributeCache(IDbContextFactory<TraccarDbContext> dbC
 
     private readonly ConcurrentDictionary<long, (DateTime Expiry, IReadOnlyList<DeviceAttribute> Items)> _cache = new();
 
-    public async ValueTask<IReadOnlyList<DeviceAttribute>> GetAsync(long deviceId)
+    /// <summary>
+    /// Deliberately synchronous — every caller runs on a DotNetty I/O thread as part of the
+    /// position-processing pipeline, and awaiting an async EF call there doesn't reliably resume
+    /// (DotNetty's SingleThreadEventExecutor doesn't service posted continuations the way a
+    /// normal SynchronizationContext does). See ConnectionManager.GetDeviceSession for the same
+    /// issue and fix on the equivalent connection-handling hot path.
+    /// </summary>
+    public IReadOnlyList<DeviceAttribute> Get(long deviceId)
     {
         if (_cache.TryGetValue(deviceId, out var entry) && entry.Expiry > DateTime.UtcNow)
             return entry.Items;
 
-        await using var db = await dbContextFactory.CreateDbContextAsync();
-        var items = await db.DeviceAttributes
+        using var db = dbContextFactory.CreateDbContext();
+        var items = db.DeviceAttributes
             .Where(a => a.DeviceId == deviceId)
-            .ToListAsync();
+            .ToList();
 
         _cache[deviceId] = (DateTime.UtcNow.Add(Ttl), items);
         return items;

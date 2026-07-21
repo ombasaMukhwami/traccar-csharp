@@ -73,8 +73,16 @@ public abstract class BaseProtocolDecoder(
 
     protected abstract object? Decode(IChannel channel, EndPoint? remoteAddress, object message);
 
+    /// <summary>
+    /// Exposes <see cref="Decode"/> to sibling decoders in the same assembly, for protocols (e.g.
+    /// GL200) that dispatch to a separate text/binary sub-decoder instance rather than decoding
+    /// inline. Mirrors Java's package-private access, which C#'s protected does not offer.
+    /// </summary>
+    internal object? DecodeMessage(IChannel channel, EndPoint? remoteAddress, object message)
+        => Decode(channel, remoteAddress, message);
+
     protected DeviceSession? GetDeviceSession(IChannel channel, EndPoint? remoteAddress, params string?[] uniqueIds)
-        => ConnectionManager.GetDeviceSessionAsync(channel, remoteAddress, uniqueIds).GetAwaiter().GetResult();
+        => ConnectionManager.GetDeviceSession(channel, remoteAddress, uniqueIds);
 
     /// <summary>
     /// Reports this server's own address (as seen by the device's connection), formatted with a

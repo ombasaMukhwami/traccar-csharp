@@ -11,23 +11,32 @@ namespace Traccar.Protocols;
 public static class DependencyInjection
 {
     /// <summary>
+    /// Builds the external position forwarder selected by Forward:Type ("kafka", "rabbitmq", or
+    /// "signalr" for pushing to a remote hub) — null if Forward:Type is unset. Exposed separately
+    /// from <see cref="AddTraccarPositionForwarding"/> so a host (e.g. Traccar.Server) can compose
+    /// this optional external forwarder together with its own local notifiers via
+    /// <see cref="CompositePositionForwarder"/>.
+    /// </summary>
+    public static IPositionForwarder? CreateConfiguredForwarder(IConfiguration configuration) =>
+        configuration[ConfigKeys.Forward.Type] switch
+        {
+            ConfigKeys.Forward.TypeKafka => new PositionForwarderKafka(configuration),
+            ConfigKeys.Forward.TypeRabbitMq => new PositionForwarderRabbitMq(configuration),
+            ConfigKeys.Forward.TypeSignalR => new PositionForwarderSignalR(configuration),
+            _ => null,
+        };
+
+    /// <summary>
     /// Registers the position forwarder selected by Forward:Type, mirroring Java's
     /// MainModule.providePositionForwarder - only one forwarder is active at a time, and none is
     /// registered (PositionForwardingHandler becomes a no-op) if Forward:Type is unset.
     /// </summary>
     public static IServiceCollection AddTraccarPositionForwarding(this IServiceCollection services, IConfiguration configuration)
     {
-        switch (configuration[ConfigKeys.Forward.Type])
+        var forwarder = CreateConfiguredForwarder(configuration);
+        if (forwarder != null)
         {
-            case ConfigKeys.Forward.TypeKafka:
-                services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderKafka(configuration));
-                break;
-            case ConfigKeys.Forward.TypeRabbitMq:
-                services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderRabbitMq(configuration));
-                break;
-            case ConfigKeys.Forward.TypeSignalR:
-                services.AddSingleton<IPositionForwarder>(_ => new PositionForwarderSignalR(configuration));
-                break;
+            services.AddSingleton(forwarder);
         }
 
         return services;

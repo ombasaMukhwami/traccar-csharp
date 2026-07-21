@@ -33,16 +33,16 @@ public sealed class H02Protocol : BaseProtocol
             pipeline.AddLast(new StringEncoderHandler());
             pipeline.AddLast(new ConnectionTrackingHandler(connectionManager, loggerFactory.CreateLogger<ConnectionTrackingHandler>()));
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
-            pipeline.AddLast(new H02ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<H02ProtocolEncoder>()));
-            pipeline.AddLast(new H02ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<H02ProtocolDecoder>()));
+            pipeline.AddLast(new H02ProtocolEncoder(configuration, dbContextFactory, loggerFactory.CreateLogger<H02ProtocolEncoder>()));
+            pipeline.AddLast(new H02ProtocolDecoder(connectionManager, configuration, loggerFactory.CreateLogger<H02ProtocolDecoder>()));
         });
 
         AddPositionServer(datagram: true, pipeline =>
         {
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new StringEncoderHandler());
-            pipeline.AddLast(new H02ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<H02ProtocolEncoder>()));
-            pipeline.AddLast(new H02ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<H02ProtocolDecoder>()));
+            pipeline.AddLast(new H02ProtocolEncoder(configuration, dbContextFactory, loggerFactory.CreateLogger<H02ProtocolEncoder>()));
+            pipeline.AddLast(new H02ProtocolDecoder(connectionManager, configuration, loggerFactory.CreateLogger<H02ProtocolDecoder>()));
         });
     }
 }

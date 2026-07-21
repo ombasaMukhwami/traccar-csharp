@@ -22,7 +22,30 @@ public class User : ExtendedModel
 
     public bool Disabled { get; set; }
 
+    /// <summary>Locked out after too many failed login attempts — cleared via the unblock
+    /// endpoint, distinct from an administrator-set <see cref="Disabled"/>.</summary>
+    public bool IsLockedOut { get; set; }
+
     public DateTime? ExpirationTime { get; set; }
+
+    /// <summary>Owning client/reseller tenant. Non-administrators are scoped to devices with a
+    /// matching Device.ClientId (see ReportUtils.GetAccessibleDevicesAsync); null/0 means
+    /// unassigned and sees no devices.</summary>
+    public int? ClientId { get; set; }
+
+    /// <summary>Reseller tenant that manages this user — distinct from <see cref="ClientId"/>,
+    /// the client this user belongs to.</summary>
+    public int? ResellerId { get; set; }
+
+    public List<RouteAccessGrant>? RouteAccess { get; set; }
+
+    /// <summary>Transient password-change fields — never persisted (see
+    /// TraccarDbContext.OnModelCreating, which ignores them for the User entity).</summary>
+    public string? CurrentPassword { get; set; }
+
+    public string? NewPassword { get; set; }
+
+    public string? ConfirmPassword { get; set; }
 
     public void SetPassword(string password)
     {

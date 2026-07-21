@@ -34,7 +34,7 @@ public sealed class Gl200Protocol : BaseProtocol
             pipeline.AddLast(new ConnectionTrackingHandler(connectionManager, loggerFactory.CreateLogger<ConnectionTrackingHandler>()));
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new Gl200ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<Gl200ProtocolEncoder>()));
-            pipeline.AddLast(new Gl200ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<Gl200ProtocolDecoder>()));
+            pipeline.AddLast(new Gl200ProtocolDecoder(connectionManager, configuration, loggerFactory));
         });
 
         AddPositionServer(datagram: true, pipeline =>
@@ -42,7 +42,7 @@ public sealed class Gl200Protocol : BaseProtocol
             pipeline.AddLast(new RawDataLoggingHandler(Name, loggerFactory.CreateLogger<RawDataLoggingHandler>()));
             pipeline.AddLast(new StringEncoderHandler());
             pipeline.AddLast(new Gl200ProtocolEncoder(dbContextFactory, loggerFactory.CreateLogger<Gl200ProtocolEncoder>()));
-            pipeline.AddLast(new Gl200ProtocolDecoder(connectionManager, loggerFactory.CreateLogger<Gl200ProtocolDecoder>()));
+            pipeline.AddLast(new Gl200ProtocolDecoder(connectionManager, configuration, loggerFactory));
         });
     }
 }

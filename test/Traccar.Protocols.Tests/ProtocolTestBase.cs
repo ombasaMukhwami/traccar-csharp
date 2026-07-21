@@ -25,6 +25,7 @@ public abstract class ProtocolTestBase
     {
         var options = new DbContextOptionsBuilder<TraccarDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseSnakeCaseNamingConvention()
             .Options;
         dbContextFactory = new TestDbContextFactory(options);
     }
@@ -136,13 +137,19 @@ public abstract class ProtocolTestBase
     }
 
     protected static void VerifyPositions(ChannelHandlerAdapter decoder, IByteBuffer input)
+        => VerifyPositions(decoder, true, input);
+
+    protected static void VerifyPositions(ChannelHandlerAdapter decoder, bool checkLocation, IByteBuffer input)
     {
         var positions = DecodeAll(decoder, input);
         Assert.NotEmpty(positions);
-        foreach (var position in positions)
+        if (checkLocation)
         {
-            Assert.InRange(position.Latitude, -90, 90);
-            Assert.InRange(position.Longitude, -180, 180);
+            foreach (var position in positions)
+            {
+                Assert.InRange(position.Latitude, -90, 90);
+                Assert.InRange(position.Longitude, -180, 180);
+            }
         }
     }
 

@@ -22,11 +22,11 @@ public sealed class ProximityEventHandler(
         if (device == null)
             return;
 
-        // "Linked devices" are other devices sharing the same non-zero group.
-        var linkedDevices = device.GroupId == 0
+        // "Linked devices" are other devices owned by the same non-zero client.
+        var linkedDevices = device.ClientId == 0
             ? []
             : await db.Devices
-                .Where(d => d.GroupId == device.GroupId && d.Id != device.Id)
+                .Where(d => d.ClientId == device.ClientId && d.Id != device.Id)
                 .ToListAsync();
 
         if (linkedDevices.Count == 0)

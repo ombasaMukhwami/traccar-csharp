@@ -12,6 +12,7 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Tra
             .UseNpgsql(
                 "Host=localhost;Database=traccar",
                 o => o.MigrationsAssembly("Traccar.Storage.Migrations.PostgreSQL"))
+            .UseSnakeCaseNamingConvention()
             .Options;
         return new TraccarDbContext(options);
     }

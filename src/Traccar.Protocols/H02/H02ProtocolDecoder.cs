@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using DotNetty.Buffers;
 using DotNetty.Transport.Channels;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
 using Traccar.Protocols.Helpers;
@@ -10,9 +11,13 @@ using Traccar.Protocols.Session;
 
 namespace Traccar.Protocols.H02;
 
-public sealed class H02ProtocolDecoder(ConnectionManager connectionManager, ILogger<H02ProtocolDecoder> logger)
+public sealed class H02ProtocolDecoder(
+    ConnectionManager connectionManager, IConfiguration configuration, ILogger<H02ProtocolDecoder> logger)
     : BaseProtocolDecoder("h02", connectionManager, logger)
 {
+    private bool Ack => configuration.GetValue<bool>(
+        $"{ConfigKeys.Protocols.SectionPrefix}:{ProtocolName}:{ConfigKeys.Protocols.Ack}");
+
     private static double ReadCoordinate(ByteBuf buf, bool lon)
     {
         var degrees = BcdUtil.ReadInteger(buf, 2);
@@ -129,6 +134,11 @@ public sealed class H02ProtocolDecoder(ConnectionManager connectionManager, ILog
 
         ProcessStatus(position, buf.ReadUnsignedInt());
 
+        if (Ack)
+        {
+            SendResponse(channel, remoteAddress, id, "R12");
+        }
+
         return position;
     }
 
@@ -195,6 +205,10 @@ public sealed class H02ProtocolDecoder(ConnectionManager connectionManager, ILog
         if (parser.HasNext() && parser.Next() == "V1")
         {
             SendResponse(channel, remoteAddress, id, "V1");
+        }
+        else if (Ack)
+        {
+            SendResponse(channel, remoteAddress, id, "R12");
         }
 
         var dateBuilder = new DateBuilder();

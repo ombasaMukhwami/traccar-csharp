@@ -17,22 +17,20 @@ public sealed class PositionProcessingHandler(
 {
     public override void ChannelRead(IChannelHandlerContext context, object message)
     {
-        if (message is Position position)
-            _ = ProcessAsync(context, position);
-        else
+        if (message is not Position position)
+        {
             context.FireChannelRead(message);
-    }
+            return;
+        }
 
-    private async Task ProcessAsync(IChannelHandlerContext context, Position position)
-    {
         var last = positionCache.GetLastPosition(position.DeviceId);
         outdatedHandler.Process(position, last);
-        await computedEarlyHandler.ProcessAsync(position, last);
+        computedEarlyHandler.Process(position, last);
         copyAttributesHandler.Process(position, last);
         distanceHandler.Process(position, last);
         engineHoursHandler.Process(position, last);
         motionHandler.Process(position);
-        await computedLateHandler.ProcessAsync(position, last);
+        computedLateHandler.Process(position, last);
         if (filterHandler.Filter(position, last)) return;
         attributesHandler.Extract(position);
         context.FireChannelRead(position);

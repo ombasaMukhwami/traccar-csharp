@@ -24,11 +24,11 @@ public class CommandsController(TraccarDbContext db, ConnectionManager connectio
     private async Task<BaseProtocol?> GetDeviceProtocolAsync(long deviceId)
     {
         var device = await db.Devices.FindAsync(deviceId);
-        if (device == null || device.PositionId == 0)
+        if (device?.PositionId is null or 0)
         {
             return null;
         }
-        var position = await db.Positions.FindAsync(device.PositionId);
+        var position = await db.Positions.FindAsync(device.PositionId.Value);
         return position?.Protocol != null ? serverManager.GetProtocol(position.Protocol) : null;
     }
 
@@ -107,11 +107,11 @@ public class CommandsController(TraccarDbContext db, ConnectionManager connectio
     }
 
     /// <summary>
-    /// Sends a command immediately to a connected device (or every connected device in a group).
-    /// If entity.Id refers to a saved command, its type/attributes are reused against the target device(s).
+    /// Sends a command immediately to a connected device.
+    /// If entity.Id refers to a saved command, its type/attributes are reused against the target device.
     /// </summary>
     [HttpPost("send")]
-    public async Task<IActionResult> Send([FromBody] Command entity, [FromQuery] long groupId = 0)
+    public async Task<IActionResult> Send([FromBody] Command entity)
     {
         if (entity.Id > 0)
         {
@@ -123,22 +123,6 @@ public class CommandsController(TraccarDbContext db, ConnectionManager connectio
             }
             entity = saved;
             entity.DeviceId = deviceId;
-        }
-
-        if (groupId > 0)
-        {
-            var devices = await db.Devices.Where(d => d.GroupId == groupId).ToListAsync();
-            var sentCount = devices.Count(device => TrySend(new Command
-            {
-                DeviceId = device.Id,
-                Type = entity.Type,
-                TextChannel = entity.TextChannel,
-                Attributes = new Dictionary<string, object>(entity.Attributes),
-            }));
-
-            return sentCount > 0
-                ? Ok(new { sent = sentCount, total = devices.Count })
-                : Problem("No connected devices in group", statusCode: StatusCodes.Status400BadRequest);
         }
 
         if (!TrySend(entity))

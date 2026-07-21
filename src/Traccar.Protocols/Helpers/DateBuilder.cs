@@ -71,10 +71,14 @@ public sealed class DateBuilder(TimeZoneInfo? timeZone = null)
 
     public DateTime GetDate()
     {
+        // Java's Calendar silently normalizes out-of-range fields instead of throwing, which
+        // matters for garbage/misaligned bytes in malformed or vendor-specific device payloads;
+        // clamping here (as the other fields already do) avoids a crash in that case.
+        var safeYear = Math.Clamp(_year, 1, 9999);
         var safeMonth = Math.Clamp(_month, 1, 12);
-        var safeDay = Math.Clamp(_day, 1, DateTime.DaysInMonth(_year, safeMonth));
+        var safeDay = Math.Clamp(_day, 1, DateTime.DaysInMonth(safeYear, safeMonth));
         var date = new DateTime(
-            _year, safeMonth, safeDay,
+            safeYear, safeMonth, safeDay,
             Math.Clamp(_hour, 0, 23), Math.Clamp(_minute, 0, 59), Math.Clamp(_second, 0, 59),
             Math.Clamp(_millisecond, 0, 999), DateTimeKind.Unspecified);
         return timeZone == null

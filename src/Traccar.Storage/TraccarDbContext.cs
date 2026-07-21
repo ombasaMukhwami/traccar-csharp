@@ -7,8 +7,6 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 {
     public DbSet<Device> Devices => Set<Device>();
 
-    public DbSet<Group> Groups => Set<Group>();
-
     public DbSet<User> Users => Set<User>();
 
     public DbSet<Position> Positions => Set<Position>();
@@ -17,44 +15,45 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
     public DbSet<Command> Commands => Set<Command>();
 
-    public DbSet<UserDevice> UserDevices => Set<UserDevice>();
-
-    public DbSet<UserGroup> UserGroups => Set<UserGroup>();
-
-    public DbSet<GroupDevice> GroupDevices => Set<GroupDevice>();
-
     public DbSet<DeviceAttribute> DeviceAttributes => Set<DeviceAttribute>();
 
     public DbSet<EventType> EventTypes => Set<EventType>();
+
+    public DbSet<Client> Clients => Set<Client>();
+
+    public DbSet<AgentDetails> Agents => Set<AgentDetails>();
+
+    public DbSet<SimCard> SimCards => Set<SimCard>();
+
+    public DbSet<RouteInfo> Routes => Set<RouteInfo>();
+
+    public DbSet<DeviceModelInfo> DeviceModels => Set<DeviceModelInfo>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Device>(entity =>
         {
-            entity.ToTable("tc_devices");
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.HasIndex(e => e.UniqueId).IsUnique();
         });
 
-        modelBuilder.Entity<Group>(entity =>
-        {
-            entity.ToTable("tc_groups");
-            entity.Property(e => e.Attributes)
-                .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
-        });
-
         modelBuilder.Entity<User>(entity =>
         {
-            entity.ToTable("tc_users");
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
+            entity.Property(e => e.RouteAccess)
+                .HasConversion(JsonValueConverter<List<RouteAccessGrant>>.Converter);
+            entity.Ignore(e => e.CurrentPassword);
+            entity.Ignore(e => e.NewPassword);
+            entity.Ignore(e => e.ConfirmPassword);
             entity.HasIndex(e => e.Email).IsUnique();
         });
 
         modelBuilder.Entity<Position>(entity =>
         {
-            entity.ToTable("tc_positions");
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.Property(e => e.Network)
@@ -66,7 +65,6 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
         modelBuilder.Entity<Event>(entity =>
         {
-            entity.ToTable("tc_events");
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.HasIndex(e => new { e.DeviceId, e.EventTime });
@@ -74,33 +72,13 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
         modelBuilder.Entity<Command>(entity =>
         {
-            entity.ToTable("tc_commands");
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.HasIndex(e => e.DeviceId);
         });
 
-        modelBuilder.Entity<UserDevice>(entity =>
-        {
-            entity.ToTable("tc_user_device");
-            entity.HasKey(e => new { e.UserId, e.DeviceId });
-        });
-
-        modelBuilder.Entity<UserGroup>(entity =>
-        {
-            entity.ToTable("tc_user_group");
-            entity.HasKey(e => new { e.UserId, e.GroupId });
-        });
-
-        modelBuilder.Entity<GroupDevice>(entity =>
-        {
-            entity.ToTable("tc_group_device");
-            entity.HasKey(e => new { e.GroupId, e.DeviceId });
-        });
-
         modelBuilder.Entity<DeviceAttribute>(entity =>
         {
-            entity.ToTable("tc_attributes");
             entity.Property(e => e.Attributes)
                 .HasConversion(AttributesConverter.Converter, AttributesConverter.Comparer);
             entity.HasIndex(e => e.DeviceId);
@@ -108,12 +86,35 @@ public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbCo
 
         modelBuilder.Entity<EventType>(entity =>
         {
-            entity.ToTable("tc_event_types");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.Name).HasMaxLength(64);
             entity.Property(e => e.Description).HasMaxLength(256);
             entity.HasData(EventType.All);
+        });
+
+        modelBuilder.Entity<Client>(entity =>
+        {
+            entity.Property(e => e.DeviceLimit).HasDefaultValue(110);
+        });
+
+        modelBuilder.Entity<RouteInfo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.HasData(RouteInfo.Catalog);
+        });
+
+        modelBuilder.Entity<DeviceModelInfo>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.HasData(DeviceModelInfo.Catalog);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasIndex(e => e.Token).IsUnique();
         });
     }
 }

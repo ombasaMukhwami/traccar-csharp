@@ -225,7 +225,7 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
         var serial = ByteBufferUtil.HexDump(id);
         if (System.Text.RegularExpressions.Regex.IsMatch(serial, "^[0-9]+$"))
         {
-            return id.ReadableBytes == 10 ? System.Text.RegularExpressions.Regex.Replace(serial, "^0+", "") : serial;
+            return serial;
         }
         else
         {
@@ -349,7 +349,11 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
             index = buf.ReadUnsignedShort();
         }
 
-        var deviceSession = GetDeviceSession(channel, remoteAddress, DecodeId(id));
+        var uniqueId = DecodeId(id);
+        var strippedId = StringUtil.StripLeading('0', uniqueId);
+        var deviceSession = uniqueId == strippedId
+            ? GetDeviceSession(channel, remoteAddress, uniqueId)
+            : GetDeviceSession(channel, remoteAddress, strippedId, uniqueId);
         if (deviceSession == null)
         {
             return null;
@@ -1169,7 +1173,7 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
                                     }
                                     break;
                                 case 0x00B2:
-                                    position.Set(Position.KeyIccid, ByteBufferUtil.HexDump(buf.ReadSlice(10)).Replace("f", ""));
+                                    position.Set(Position.KeyIccid, StringUtil.StripTrailing('f', ByteBufferUtil.HexDump(buf.ReadSlice(10))));
                                     break;
                                 case 0x00B9:
                                     buf.ReadUnsignedByte(); // count
@@ -1805,6 +1809,27 @@ public sealed class Jt808ProtocolDecoder(ConnectionManager connectionManager, IC
             position.Course = buf.ReadUnsignedShort();
 
             // TODO more positions and g sensor data
+
+            return position;
+        }
+        else if (type == 0xF3)
+        {
+            var position = new Position(ProtocolName) { DeviceId = deviceSession.DeviceId };
+
+            while (buf.ReadableBytes > 4)
+            {
+                var subtype = buf.ReadUnsignedShort();
+                var length = buf.ReadUnsignedShort();
+                var endIndex = buf.ReaderIndex + length;
+                switch (subtype)
+                {
+                    case 0x0002: position.Set("collision", buf.ReadUnsignedShort() / 256.0 / 100.0); break;
+                    case 0x0006: position.DeviceTime = ReadDate(buf, deviceSession.Get<TimeZoneInfo>(DeviceSession.KeyTimezone)); break;
+                }
+                buf.ReaderIndex = endIndex;
+            }
+
+            GetLastLocation(position, position.DeviceTime);
 
             return position;
         }

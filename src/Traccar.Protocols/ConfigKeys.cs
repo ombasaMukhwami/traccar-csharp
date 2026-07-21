@@ -27,6 +27,12 @@ public static class ConfigKeys
 
         /// <summary>Enables the alternative command encoding variant (Jt808, Meitrack, Meiligao).</summary>
         public const string Alternative = "Alternative";
+
+        /// <summary>When true, uses the server-received time instead of the device-reported fix time (Gl200).</summary>
+        public const string IgnoreFixTime = "IgnoreFixTime";
+
+        /// <summary>When true, sends a +SACK acknowledgement for every decoded text sentence (Gl200).</summary>
+        public const string Ack = "Ack";
     }
 
     /// <summary>"Forward:*" section — position forwarding to an external broker.</summary>
@@ -79,15 +85,9 @@ public static class ConfigKeys
         public const string WebUrl = "Server:WebUrl";
     }
 
-    /// <summary>"Database:*" section — RDBMS provider selection and connection behaviour.</summary>
+    /// <summary>"Database:*" section — PostgreSQL connection retry behaviour.</summary>
     public static class Database
     {
-        /// <summary>
-        /// Active database provider. Supported values: "sqlite" (default), "postgresql",
-        /// "mysql", "mariadb", "sqlserver". Case-insensitive.
-        /// </summary>
-        public const string Provider = "Database:Provider";
-
         /// <summary>"Database:Retry:*" sub-section — transient-fault retry settings.</summary>
         public static class Retry
         {

@@ -7,19 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.9.0" />
-    <PackageReference Include="MySql.EntityFrameworkCore" Version="10.0.7" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.7" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,9 +25,6 @@
     <ProjectReference Include="..\Traccar.Protocols\Traccar.Protocols.csproj" />
     <ProjectReference Include="..\Traccar.Storage\Traccar.Storage.csproj" />
     <ProjectReference Include="..\Traccar.Storage.Migrations.PostgreSQL\Traccar.Storage.Migrations.PostgreSQL.csproj" />
-    <ProjectReference Include="..\Traccar.Storage.Migrations.MySQL\Traccar.Storage.Migrations.MySQL.csproj" />
-    <ProjectReference Include="..\Traccar.Storage.Migrations.SqlServer\Traccar.Storage.Migrations.SqlServer.csproj" />
-    <ProjectReference Include="..\Traccar.Storage.Migrations.Sqlite\Traccar.Storage.Migrations.Sqlite.csproj" />
   </ItemGroup>
 
 </Project>

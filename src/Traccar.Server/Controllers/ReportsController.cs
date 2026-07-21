@@ -29,7 +29,6 @@ public class ReportsController(
     [HttpGet("trips")]
     public async Task<ActionResult<List<TripReportItem>>> GetTrips(
         [FromQuery(Name = "deviceId")] List<long>? deviceIds,
-        [FromQuery(Name = "groupId")] List<long>? groupIds,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
@@ -39,7 +38,7 @@ public class ReportsController(
         try
         {
             return await tripsProvider.GetObjectsAsync(
-                CurrentUserId, deviceIds ?? [], groupIds ?? [], from.Value, to.Value);
+                CurrentUserId, deviceIds ?? [], from.Value, to.Value);
         }
         catch (ArgumentException ex)
         {
@@ -54,7 +53,6 @@ public class ReportsController(
     [HttpGet("stops")]
     public async Task<ActionResult<List<StopReportItem>>> GetStops(
         [FromQuery(Name = "deviceId")] List<long>? deviceIds,
-        [FromQuery(Name = "groupId")] List<long>? groupIds,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
@@ -64,7 +62,7 @@ public class ReportsController(
         try
         {
             return await stopsProvider.GetObjectsAsync(
-                CurrentUserId, deviceIds ?? [], groupIds ?? [], from.Value, to.Value);
+                CurrentUserId, deviceIds ?? [], from.Value, to.Value);
         }
         catch (ArgumentException ex)
         {
@@ -79,7 +77,6 @@ public class ReportsController(
     [HttpGet("summary")]
     public async Task<ActionResult<List<SummaryReportItem>>> GetSummary(
         [FromQuery(Name = "deviceId")] List<long>? deviceIds,
-        [FromQuery(Name = "groupId")] List<long>? groupIds,
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] bool daily = false)
@@ -90,7 +87,7 @@ public class ReportsController(
         try
         {
             return await summaryProvider.GetObjectsAsync(
-                CurrentUserId, deviceIds ?? [], groupIds ?? [], from.Value, to.Value, daily);
+                CurrentUserId, deviceIds ?? [], from.Value, to.Value, daily);
         }
         catch (ArgumentException ex)
         {

@@ -8,7 +8,7 @@ namespace Traccar.Protocols.Tests;
 public sealed class H02ProtocolDecoderTest : ProtocolTestBase
 {
     private H02ProtocolDecoder CreateDecoder()
-        => new(CreateConnectionManager(), NullLogger<H02ProtocolDecoder>.Instance);
+        => new(CreateConnectionManager(), CreateConfiguration(), NullLogger<H02ProtocolDecoder>.Instance);
 
     [Fact]
     public void TestDecodeV8WithExpectedCoordinates()
@@ -153,5 +153,61 @@ public sealed class H02ProtocolDecoderTest : ProtocolTestBase
         var decoder = CreateDecoder();
 
         VerifyNull(decoder, Buffer("*HQ,4109198974,#"));
+    }
+
+    [Fact]
+    public void TestDecodeUnhandledXtTypeIsNull()
+    {
+        var decoder = CreateDecoder();
+
+        VerifyNull(decoder, Buffer("*HQ,356327080425330,XT,1,100#"));
+    }
+
+    [Fact]
+    public void TestDecodeUnhandledBsTypeIsNull()
+    {
+        var decoder = CreateDecoder();
+
+        VerifyNull(decoder, Buffer(
+            "*HQ,356803210091319,BS,,2d4,a,1b63,1969,26,1b63,10b2,31,0,0,25,,ffffffff,60#"));
+    }
+
+    [Fact]
+    public void TestDecodeUnhandledBaseTypeIsNull()
+    {
+        var decoder = CreateDecoder();
+
+        VerifyNull(decoder, Buffer("*HQ,8401016597,BASE,152609,0,0,0,0,211014,FFFFFFFF#"));
+    }
+
+    [Fact]
+    public void TestDecodeBinaryLongId()
+    {
+        var decoder = CreateDecoder();
+
+        VerifyPosition(decoder, Binary(
+            "2435248308419329301047591808172627335900074412294E024138FEFFFFFFFF01120064BA73005ECC"));
+    }
+
+    [Fact]
+    public void TestDecodeStatusBinary()
+    {
+        var decoder = CreateDecoder();
+
+        VerifyAttribute(
+            decoder,
+            Binary("2441091144271222470112142233983006114026520E000000FFFFFBFFFF0014060000000001CC00262B0F170A"),
+            Position.KeyStatus, 0xFFFFFBFFL);
+    }
+
+    [Fact]
+    public void TestDecodeStatusWithCellId()
+    {
+        var decoder = CreateDecoder();
+
+        VerifyAttribute(
+            decoder,
+            Buffer("*HQ,4210051415,V1,164549,A,0956.3869,N,08406.7068,W,000.00,000,221215,FFFFFBFF,712,01,0,0,6#"),
+            Position.KeyStatus, 0xFFFFFBFFL);
     }
 }

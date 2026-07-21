@@ -12,8 +12,10 @@ public sealed class Jt1078ProtocolDecoderTest : ProtocolTestBase
     [Fact]
     public void TestDecodeSinglePacketFrame()
     {
-        // 10-byte BCD device id 00000866496077582164 with leading zeros stripped.
-        SeedDevice("866496077582164");
+        // 10-byte BCD device id, decoded (and looked up) raw, leading zeros included - JT1078's
+        // device lookup mirrors Java's, which does not strip leading zeros the way Jt808ProtocolDecoder's
+        // own Decode() does for its own messages.
+        SeedDevice("00000866496077582164");
 
         var connectionManager = CreateConnectionManager();
         var deviceLookupService = new DeviceLookupService(DbContextFactory);

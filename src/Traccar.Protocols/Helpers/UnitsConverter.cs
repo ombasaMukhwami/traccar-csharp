@@ -11,4 +11,8 @@ public static class UnitsConverter
     public static double KnotsFromMph(double value) => value * KnotsToMphRatio;
 
     public static double KnotsFromMps(double value) => value * KnotsToMpsRatio;
+
+    private const long MillisecondsToHoursRatio = 3600 * 1000;
+
+    public static long MsFromHours(double value) => (long)(value * MillisecondsToHoursRatio);
 }

@@ -4,12 +4,7 @@
     <Project Path="src/Traccar.Protocols/Traccar.Protocols.csproj" />
     <Project Path="src/Traccar.Server/Traccar.Server.csproj" />
     <Project Path="src/Traccar.Storage/Traccar.Storage.csproj" />
-  </Folder>
-  <Folder Name="/src/Migrations/">
     <Project Path="src/Traccar.Storage.Migrations.PostgreSQL/Traccar.Storage.Migrations.PostgreSQL.csproj" />
-    <Project Path="src/Traccar.Storage.Migrations.MySQL/Traccar.Storage.Migrations.MySQL.csproj" />
-    <Project Path="src/Traccar.Storage.Migrations.SqlServer/Traccar.Storage.Migrations.SqlServer.csproj" />
-    <Project Path="src/Traccar.Storage.Migrations.Sqlite/Traccar.Storage.Migrations.Sqlite.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Traccar.Protocols.Tests/Traccar.Protocols.Tests.csproj" />

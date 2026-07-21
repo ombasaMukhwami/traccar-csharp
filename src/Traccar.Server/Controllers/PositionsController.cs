@@ -51,7 +51,7 @@ public class PositionsController(TraccarDbContext db) : ControllerBase
         }
 
         var latestIds = await db.Devices
-            .Where(d => d.PositionId != 0)
+            .Where(d => d.PositionId != null && d.PositionId != 0)
             .Select(d => d.PositionId)
             .ToListAsync();
 

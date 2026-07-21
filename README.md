@@ -17,7 +17,7 @@ The primary goal is a working server that real GPS devices can connect to, that 
 | Network I/O | Netty | DotNetty |
 | Dependency Injection | Guice | Microsoft.Extensions.DependencyInjection |
 | REST API | Jersey / JAX-RS | ASP.NET Core MVC Controllers |
-| Database ORM | Custom SQL + Liquibase | EF Core + SQLite (swappable via connection string) |
+| Database ORM | Custom SQL + Liquibase | EF Core + PostgreSQL (Npgsql) |
 | Authentication | Servlet session / cookie | ASP.NET Core Cookie Authentication |
 | Configuration | `traccar.xml` / `Keys.java` | `appsettings.json` / `ConfigKeys.cs` |
 | Protocol options | `IConfiguration` raw reads | `IOptionsMonitor<ProtocolOptions>` (named, per-protocol) |
@@ -41,6 +41,7 @@ Each protocol runs on a configurable TCP (and optionally UDP) port. Enable a pro
 | Meitrack | 5012 | TCP + UDP |
 | Meiligao | 7700 | TCP + UDP |
 | Niot | 5048 | TCP |
+| Starcom | 5501 | TCP |
 
 ---
 
@@ -92,23 +93,8 @@ All endpoints (except `GET /api/server`, `POST /api/session`, and `POST /api/pas
 | `PUT` | `/api/commands/{id}` | Update saved command |
 | `DELETE` | `/api/commands/{id}` | Delete saved command |
 | `GET` | `/api/commands/send` | List sendable commands for a device |
-| `POST` | `/api/commands/send` | Send command to connected device (or group) |
+| `POST` | `/api/commands/send` | Send command to a connected device |
 | `GET` | `/api/commands/types` | List command types (device-specific or all) |
-
-### Permissions (entity links)
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/permissions` | List links (query: `userId`, `deviceId`, `groupId`) |
-| `POST` | `/api/permissions` | Add a single link |
-| `POST` | `/api/permissions/bulk` | Add multiple links |
-| `DELETE` | `/api/permissions` | Remove a single link |
-| `DELETE` | `/api/permissions/bulk` | Remove multiple links |
-
-Permission body format — a flat JSON object with exactly two `*Id` keys:
-```json
-{ "userId": 1, "deviceId": 5 }
-```
-Supported combinations: `userId+deviceId`, `userId+groupId`, `groupId+deviceId`.
 
 ### Password
 | Method | Path | Description |
@@ -130,7 +116,15 @@ Supported combinations: `userId+deviceId`, `userId+groupId`, `groupId+deviceId`.
 ```jsonc
 {
   "ConnectionStrings": {
-    "Default": "Data Source=traccar.db;Default Timeout=5"
+    "DefaultConnection": "Host=localhost;Database=traccar;Username=postgres;Password=postgres"
+  },
+  "Database": {
+    "Retry": {
+      "Enable": true,
+      "MaxRetryCount": 6,
+      "MaxRetryDelaySeconds": 30,
+      "CommandTimeoutSeconds": 30
+    }
   },
   "Admin": {
     "Email": "admin",       // Seeded on first run if no users exist
@@ -169,14 +163,13 @@ Supported combinations: `userId+deviceId`, `userId+groupId`, `groupId+deviceId`.
 ```
 Traccar.sln
 src/
-  Traccar.Model/          POCOs: Position, Device, User, Group, Event, Command,
-                          permission join entities (UserDevice, UserGroup, GroupDevice)
+  Traccar.Model/          POCOs: Position, Device, User, Event, Command
   Traccar.Storage/        EF Core DbContext, migrations, JSON/attribute converters
   Traccar.Protocols/      DotNetty pipeline: BaseProtocol, BaseProtocolDecoder,
                           ProtocolOptions (IOptions), position forwarding (Kafka/RabbitMQ),
                           helpers (BitUtil, Checksum, Parser, DataConverter, etc.)
     H02/  Gt06/  Teltonika/  Khd/  GoSafe/  Gl200/
-    Jt808/  Jt1078/  Meitrack/  Meiligao/  Niot/
+    Jt808/  Jt1078/  Meitrack/  Meiligao/  Niot/  Starcom/
   Traccar.Server/         ASP.NET Core host: Program.cs, Controllers/
 test/
   Traccar.Protocols.Tests/  xUnit decoder tests ported from Java (hex frame → Position fields)
@@ -191,8 +184,8 @@ cd src/Traccar.Server
 dotnet run
 ```
 
-The server starts on `http://localhost:5090`. On first run:
-- The database (`traccar.db`) is created and all migrations applied automatically.
+The server starts on `http://localhost:5090`. Requires a running PostgreSQL instance reachable via `ConnectionStrings:DefaultConnection`. On first run:
+- The `traccar` database schema is created and all migrations applied automatically.
 - A default admin user is seeded (credentials from `Admin:Email`/`Admin:Password` in config).
 - A warning is logged: **change the default password immediately**.
 
@@ -223,7 +216,7 @@ Failed deliveries are optionally retried with exponential back-off (see `Forward
 ## Out of Scope
 
 The following Java Traccar features are intentionally deferred:
-- **Full permission system** — all authenticated users currently have access to all data; the `PermissionsController` stores links but does not yet filter queries by them.
+- **Fine-grained per-entity permissions** — there's no group/user-device/user-group link system. Access is scoped by `Device.ClientId` matching the caller's `User.ClientId` (administrators see everything); this only applies to the Reports endpoints today — `DevicesController`/`PositionsController` still return everything to any authenticated user.
 - **SMS / text-channel commands** — no `SmsManager` equivalent.
 - **Offline command queue** — commands can only be sent to currently-connected devices.
 - **Reports** (trips, stops, events, summary, etc.).
@@ -231,7 +224,7 @@ The following Java Traccar features are intentionally deferred:
 - **Geofencing engine** — `Geofence` model not yet ported.
 - **Geocoding** — `Geocoder` not ported.
 - **Multi-instance / cluster** broadcast.
-- **675 additional protocols** beyond the 11 listed above.
+- **255 additional protocols** beyond the 12 listed above (267 total in upstream Traccar).
 
 ---
 

@@ -1,15 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-using Traccar.Protocols;
 using Traccar.Storage;
 
 namespace Traccar.Server;
 
 /// <summary>
 /// Design-time factory used by "dotnet ef migrations" tooling.
-/// Reads Database:Provider and ConnectionStrings:DefaultConnection from appsettings.json
-/// so migrations are generated for the currently configured database.
+/// Reads ConnectionStrings:DefaultConnection from appsettings.json so migrations are
+/// generated against the configured PostgreSQL database.
 /// </summary>
 public class TraccarDbContextFactory : IDesignTimeDbContextFactory<TraccarDbContext>
 {
@@ -22,15 +20,8 @@ public class TraccarDbContextFactory : IDesignTimeDbContextFactory<TraccarDbCont
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = config.GetConnectionString("DefaultConnection")
-            ?? "Data Source=traccar.db";
-
-        var provider = (config[ConfigKeys.Database.Provider] ?? "sqlite").ToLowerInvariant();
-
-        var retry = config.GetSection("Database:Retry").Get<DatabaseRetryOptions>() ?? new DatabaseRetryOptions();
-
         var optionsBuilder = new DbContextOptionsBuilder<TraccarDbContext>();
-        DbProviderExtensions.UseProvider(optionsBuilder, provider, connectionString, retry);
+        DbProviderExtensions.UseProvider(optionsBuilder, config);
 
         return new TraccarDbContext(optionsBuilder.Options);
     }

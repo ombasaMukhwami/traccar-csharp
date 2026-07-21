@@ -9,7 +9,7 @@ public sealed class H02ProtocolEncoderTest : ProtocolTestBase
 {
     private readonly DateTime time = new(2024, 1, 1, 1, 2, 3, DateTimeKind.Utc);
 
-    private H02ProtocolEncoder CreateEncoder() => new(DbContextFactory, NullLogger<H02ProtocolEncoder>.Instance);
+    private H02ProtocolEncoder CreateEncoder() => new(CreateConfiguration(), DbContextFactory, NullLogger<H02ProtocolEncoder>.Instance);
 
     [Fact]
     public void TestAlarmArmEncode()

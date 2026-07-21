@@ -17,8 +17,15 @@ public sealed class ConnectionManager(
     public DeviceSession? GetDeviceSession(long deviceId)
         => _sessionsByDeviceId.GetValueOrDefault(deviceId);
 
-    public async Task<DeviceSession?> GetDeviceSessionAsync(
-        IChannel channel, EndPoint? remoteAddress, params string?[] uniqueIds)
+    /// <summary>
+    /// Resolves (or auto-registers) the device session for a connecting device. Deliberately
+    /// synchronous rather than async: every caller is a DotNetty I/O-thread handler that can only
+    /// consume this result by blocking on it anyway (DotNetty's ChannelRead is synchronous), and
+    /// blocking on an async Task from within DotNetty's own SingleThreadEventExecutor deadlocks —
+    /// the continuation gets scheduled back onto the very thread that's blocked waiting for it.
+    /// Plain synchronous EF calls avoid that entirely.
+    /// </summary>
+    public DeviceSession? GetDeviceSession(IChannel channel, EndPoint? remoteAddress, params string?[] uniqueIds)
     {
         var ids = uniqueIds.Where(id => !string.IsNullOrEmpty(id)).Cast<string>().ToArray();
         _sessionsByChannel.TryGetValue(channel, out var channelSessions);
@@ -47,8 +54,8 @@ public sealed class ConnectionManager(
             return any;
         }
 
-        await using var db = await dbContextFactory.CreateDbContextAsync();
-        var device = await db.Devices.FirstOrDefaultAsync(d => ids.Contains(d.UniqueId));
+        using var db = dbContextFactory.CreateDbContext();
+        var device = db.Devices.FirstOrDefault(d => ids.Contains(d.UniqueId));
 
         if (device == null)
         {
@@ -56,7 +63,7 @@ public sealed class ConnectionManager(
             // auto-registered on first contact rather than silently dropped.
             device = new Device { Name = ids[0], UniqueId = ids[0] };
             db.Devices.Add(device);
-            await db.SaveChangesAsync();
+            db.SaveChanges();
             logger.LogInformation("Automatically registered {UniqueId}", ids[0]);
         }
 
@@ -86,8 +93,8 @@ public sealed class ConnectionManager(
     {
         try
         {
-            await using var db = await dbContextFactory.CreateDbContextAsync();
-            var device = await db.Devices.FindAsync(deviceId);
+            await using var db = await dbContextFactory.CreateDbContextAsync().ConfigureAwait(false);
+            var device = await db.Devices.FindAsync(deviceId).ConfigureAwait(false);
             if (device == null)
             {
                 return;
@@ -111,7 +118,7 @@ public sealed class ConnectionManager(
                 db.Events.Add(new Event(eventType, deviceId));
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync().ConfigureAwait(false);
         }
         catch (Exception e)
         {

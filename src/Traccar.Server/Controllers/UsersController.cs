@@ -105,6 +105,23 @@ public class UsersController(TraccarDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return NoContent();
     }
+
+    [HttpPut("{id:long}/unblock")]
+    [Authorize(Roles = ConfigKeys.Auth.RoleAdministrator)]
+    public async Task<IActionResult> Unblock(long id)
+    {
+        var user = await db.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        user.IsLockedOut = false;
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpGet("routes")]
+    public ActionResult<IReadOnlyList<RouteInfo>> GetRoutes() => Ok(RouteInfo.Catalog);
 }
 
 public sealed record UserDto(

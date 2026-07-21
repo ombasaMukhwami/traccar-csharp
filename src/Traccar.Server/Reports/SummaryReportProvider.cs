@@ -9,13 +9,13 @@ namespace Traccar.Server.Reports;
 public sealed class SummaryReportProvider(ReportUtils reportUtils, IConfiguration configuration)
 {
     public async Task<List<SummaryReportItem>> GetObjectsAsync(
-        long userId, IList<long> deviceIds, IList<long> groupIds,
+        long userId, IList<long> deviceIds,
         DateTime from, DateTime to, bool daily)
     {
         reportUtils.CheckPeriodLimit(from, to);
 
         var result = new List<SummaryReportItem>();
-        foreach (var device in await reportUtils.GetAccessibleDevicesAsync(userId, deviceIds, groupIds))
+        foreach (var device in await reportUtils.GetAccessibleDevicesAsync(userId, deviceIds))
         {
             var deviceResults = await CalculateDeviceResultsAsync(device, from, to, daily);
             result.AddRange(deviceResults.Where(r => r.StartTime is not null && r.EndTime is not null));

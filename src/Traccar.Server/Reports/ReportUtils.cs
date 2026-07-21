@@ -59,95 +59,43 @@ public sealed class ReportUtils(TraccarDbContext db, IConfiguration configuratio
     }
 
     // -------------------------------------------------------------------------
-    // Accessible-device resolution (mirrors Java's DeviceUtil.getAccessibleDevices)
+    // Accessible-device resolution — scoped by Device.ClientId against the caller's own
+    // User.ClientId (administrators see every device, matching the pre-existing convention
+    // elsewhere that admins bypass ownership checks).
     // -------------------------------------------------------------------------
 
-    public async Task<List<Device>> GetAccessibleDevicesAsync(
-        long userId, IList<long> deviceIds, IList<long> groupIds)
+    private async Task<IQueryable<Device>> AccessibleDevicesQueryAsync(long userId)
     {
-        // Direct device permissions
-        var directDeviceIds = await db.UserDevices
-            .Where(ud => ud.UserId == userId)
-            .Select(ud => ud.DeviceId)
-            .ToListAsync();
-
-        // Groups the user has direct access to
-        var userGroupIds = await db.UserGroups
-            .Where(ug => ug.UserId == userId)
-            .Select(ug => ug.GroupId)
-            .ToListAsync();
-
-        // Load full group hierarchy once; walk it in-memory to support nesting
-        var allGroups = await db.Groups.Select(g => new { g.Id, g.GroupId }).ToListAsync();
-        var subGroupsByParent = allGroups
-            .Where(g => g.GroupId > 0)
-            .GroupBy(g => g.GroupId)
-            .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToList());
-
-        var allAccessibleGroupIds = new HashSet<long>(userGroupIds);
-        var queue = new Queue<long>(userGroupIds);
-        while (queue.Count > 0)
+        var user = await db.Users.FindAsync(userId);
+        if (user is { Administrator: true })
         {
-            var gId = queue.Dequeue();
-            if (subGroupsByParent.TryGetValue(gId, out var subs))
-                foreach (var sub in subs)
-                    if (allAccessibleGroupIds.Add(sub))
-                        queue.Enqueue(sub);
+            return db.Devices;
         }
 
-        var groupDeviceIds = await db.GroupDevices
-            .Where(gd => allAccessibleGroupIds.Contains(gd.GroupId))
-            .Select(gd => gd.DeviceId)
-            .ToListAsync();
+        var clientId = user?.ClientId ?? 0;
+        return db.Devices.Where(d => d.ClientId == clientId);
+    }
 
-        var allAccessibleIds = directDeviceIds.Union(groupDeviceIds).ToHashSet();
-        var allDevices = await db.Devices
-            .Where(d => allAccessibleIds.Contains(d.Id))
-            .ToListAsync();
+    public async Task<List<Device>> GetAccessibleDevicesAsync(long userId, IList<long> deviceIds)
+    {
+        var accessible = await AccessibleDevicesQueryAsync(userId);
 
-        // No filter requested → return everything the user can see
-        if (deviceIds.Count == 0 && groupIds.Count == 0)
-            return allDevices;
-
-        // Apply the caller-specified filter
-        var deviceById = allDevices.ToDictionary(d => d.Id);
-        var devicesByGroupId = allDevices
-            .Where(d => d.GroupId > 0)
-            .GroupBy(d => d.GroupId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        var result = new HashSet<long>(deviceIds.Where(id => deviceById.ContainsKey(id)));
-
-        var filterQueue = new Queue<long>(groupIds.Where(allAccessibleGroupIds.Contains));
-        while (filterQueue.Count > 0)
+        if (deviceIds.Count > 0)
         {
-            var gId = filterQueue.Dequeue();
-            if (devicesByGroupId.TryGetValue(gId, out var devs))
-                foreach (var d in devs)
-                    result.Add(d.Id);
-            if (subGroupsByParent.TryGetValue(gId, out var subs))
-                foreach (var sub in subs)
-                    filterQueue.Enqueue(sub);
+            accessible = accessible.Where(d => deviceIds.Contains(d.Id));
         }
 
-        return allDevices.Where(d => result.Contains(d.Id)).ToList();
+        return await accessible.ToListAsync();
     }
 
     public async Task<Dictionary<long, Position>> GetLatestPositionsAsync(long userId)
     {
-        // Collect device IDs the user can see
-        var directDeviceIds = await db.UserDevices
-            .Where(ud => ud.UserId == userId).Select(ud => ud.DeviceId).ToListAsync();
-        var userGroupIds = await db.UserGroups
-            .Where(ug => ug.UserId == userId).Select(ug => ug.GroupId).ToListAsync();
-        var groupDeviceIds = await db.GroupDevices
-            .Where(gd => userGroupIds.Contains(gd.GroupId)).Select(gd => gd.DeviceId).ToListAsync();
-        var accessibleDeviceIds = directDeviceIds.Union(groupDeviceIds).ToHashSet();
+        var accessible = await AccessibleDevicesQueryAsync(userId);
 
         // Latest position per device via the PositionId stored on the device row
-        return await db.Devices
-            .Where(d => accessibleDeviceIds.Contains(d.Id) && d.PositionId != 0)
-            .Join(db.Positions, d => d.PositionId, p => p.Id, (_, p) => p)
+        return await accessible
+            .Where(d => d.PositionId != null && d.PositionId != 0)
+            .Join(db.Positions, d => d.PositionId!.Value, p => p.Id, (_, p) => p)
             .ToDictionaryAsync(p => p.DeviceId);
     }
 
