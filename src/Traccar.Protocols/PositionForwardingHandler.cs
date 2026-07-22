@@ -25,15 +25,19 @@ public sealed class PositionForwardingHandler(
     {
         if (positionForwarder != null && message is Position position)
         {
-            _ = ForwardAsync(position);
+            // Runs off the calling DotNetty thread via Task.Run (a genuine thread-pool thread,
+            // safe to block) rather than awaiting an async EF call inline — DotNetty's
+            // SingleThreadEventExecutor doesn't reliably resume continuations posted from its own
+            // thread. See ConnectionManager.GetDeviceSession for the same issue in more detail.
+            _ = Task.Run(() => Forward(position));
         }
         context.FireChannelRead(message);
     }
 
-    private async Task ForwardAsync(Position position)
+    private void Forward(Position position)
     {
-        await using var db = await dbContextFactory.CreateDbContextAsync();
-        var device = await db.Devices.FindAsync(position.DeviceId);
+        using var db = dbContextFactory.CreateDbContext();
+        var device = db.Devices.Find(position.DeviceId);
 
         Interlocked.Increment(ref _deliveryPending);
         Send(new PositionForwardData(position, device), retries: 0);

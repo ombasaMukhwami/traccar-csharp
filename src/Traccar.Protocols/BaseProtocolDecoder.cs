@@ -198,7 +198,8 @@ public abstract class BaseProtocolDecoder(
         deviceId ??= GetDeviceSession(channel, remoteAddress)?.DeviceId;
         if (deviceId is > 0)
         {
-            _ = ConnectionManager.UpdateDeviceStatusAsync(deviceId.Value, Device.StatusOnline, DateTime.UtcNow);
+            var id = deviceId.Value;
+            _ = Task.Run(() => ConnectionManager.UpdateDeviceStatus(id, Device.StatusOnline, DateTime.UtcNow));
         }
     }
 }

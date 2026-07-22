@@ -11,11 +11,20 @@ public sealed class PositionPersistHandler(
     PositionCache positionCache,
     ILogger<PositionPersistHandler> logger) : ChannelHandlerAdapter
 {
+    /// <summary>
+    /// Deliberately synchronous, and called directly rather than fire-and-forget — every caller
+    /// is a DotNetty I/O thread, and blocking on an async Task there doesn't reliably resume
+    /// (DotNetty's SingleThreadEventExecutor doesn't service posted continuations the way a
+    /// normal SynchronizationContext does; see ConnectionManager.GetDeviceSession for the same
+    /// issue on the equivalent connection-handling path). Running inline also fixes an ordering
+    /// bug the previous fire-and-forget version had: multiple positions for the same device
+    /// arriving in quick succession could race on updating Device.PositionId.
+    /// </summary>
     public override void ChannelRead(IChannelHandlerContext context, object message)
     {
         if (message is Position position)
         {
-            _ = SaveAsync(context, position);
+            Save(context, position);
         }
         else
         {
@@ -23,13 +32,13 @@ public sealed class PositionPersistHandler(
         }
     }
 
-    private async Task SaveAsync(IChannelHandlerContext context, Position position)
+    private void Save(IChannelHandlerContext context, Position position)
     {
         try
         {
-            await using var db = await dbContextFactory.CreateDbContextAsync();
+            using var db = dbContextFactory.CreateDbContext();
             db.Positions.Add(position);
-            await db.SaveChangesAsync();
+            db.SaveChanges();
 
             // Only overwrite the device's current position when this fix is not older than the
             // cached last fix — prevents archival replay from clobbering newer live positions.
@@ -39,12 +48,12 @@ public sealed class PositionPersistHandler(
 
             if (isLatest)
             {
-                var device = await db.Devices.FindAsync(position.DeviceId);
+                var device = db.Devices.Find(position.DeviceId);
                 if (device != null)
                 {
                     device.PositionId = position.Id;
                     device.LastUpdate = position.DeviceTime ?? position.ServerTime;
-                    await db.SaveChangesAsync();
+                    db.SaveChanges();
                 }
             }
 

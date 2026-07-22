@@ -20,8 +20,14 @@ public sealed class GeocoderHandler(
     {
         if (message is Position position && !_ignorePositions && position.Address == null)
         {
-            // Fire-and-forget: geocode asynchronously without blocking the DotNetty event loop.
-            _ = GeocodeAsync(context, position);
+            // Task.Run moves the whole async chain (including the HTTP await) onto a genuine
+            // thread-pool thread. Calling GeocodeAsync directly here would start it on this
+            // DotNetty I/O thread, and DotNetty's SingleThreadEventExecutor doesn't reliably
+            // resume a continuation posted back to it — see ConnectionManager.GetDeviceSession
+            // for the same issue on the (synchronous, DB-only) connection-handling path. This one
+            // stays genuinely async rather than becoming blocking-synchronous, since an HTTP
+            // round-trip is too slow to block a pipeline thread on.
+            _ = Task.Run(() => GeocodeAsync(context, position));
             return;
         }
         context.FireChannelRead(message);

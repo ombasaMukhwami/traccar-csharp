@@ -11,11 +11,11 @@ public sealed class AlarmEventHandler(
     private readonly bool _ignoreDuplicates =
         configuration.GetValue(ConfigKeys.Events.IgnoreDuplicateAlerts, false);
 
-    protected override ValueTask OnPositionAsync(Position position, Position? last, Action<Event> callback)
+    protected override void OnPosition(Position position, Position? last, Action<Event> callback)
     {
         var alarmString = position.GetString(Position.KeyAlarm);
         if (alarmString == null)
-            return ValueTask.CompletedTask;
+            return;
 
         var alarms = new HashSet<string>(alarmString.Split(',', StringSplitOptions.RemoveEmptyEntries));
 
@@ -32,7 +32,5 @@ public sealed class AlarmEventHandler(
             ev.Set(Position.KeyAlarm, alarm);
             callback(ev);
         }
-
-        return ValueTask.CompletedTask;
     }
 }

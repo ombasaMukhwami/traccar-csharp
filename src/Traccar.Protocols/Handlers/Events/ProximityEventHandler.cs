@@ -11,23 +11,23 @@ public sealed class ProximityEventHandler(
     PositionCache positionCache,
     ILogger<ProximityEventHandler> logger) : BaseEventHandler(logger)
 {
-    protected override async ValueTask OnPositionAsync(Position position, Position? last, Action<Event> callback)
+    protected override void OnPosition(Position position, Position? last, Action<Event> callback)
     {
         // Only process the most recent fix for this device — skip historical replays.
         if (last != null && position.FixTime.GetValueOrDefault() < last.FixTime.GetValueOrDefault())
             return;
 
-        await using var db = await dbContextFactory.CreateDbContextAsync();
-        var device = await db.Devices.FindAsync(position.DeviceId);
+        using var db = dbContextFactory.CreateDbContext();
+        var device = db.Devices.Find(position.DeviceId);
         if (device == null)
             return;
 
         // "Linked devices" are other devices owned by the same non-zero client.
         var linkedDevices = device.ClientId == 0
             ? []
-            : await db.Devices
+            : db.Devices
                 .Where(d => d.ClientId == device.ClientId && d.Id != device.Id)
-                .ToListAsync();
+                .ToList();
 
         if (linkedDevices.Count == 0)
             return;

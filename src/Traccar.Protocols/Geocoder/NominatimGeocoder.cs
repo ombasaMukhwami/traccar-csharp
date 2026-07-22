@@ -6,9 +6,14 @@ namespace Traccar.Protocols.Geocoder;
 
 public sealed class NominatimGeocoder(HttpClient httpClient, IConfiguration configuration) : IGeocoderService
 {
-    private const string UrlTemplate =
-        "https://nominatim.openstreetmap.org/reverse?format=json&lat={0:F6}&lon={1:F6}&zoom=18&addressdetails=1";
+    private const string DefaultBaseUrl = "https://nominatim.openstreetmap.org";
 
+    // Geocoder:Url overrides the base host (e.g. a self-hosted Nominatim-compatible instance) —
+    // this was previously declared in ConfigKeys but never actually read here, so it silently had
+    // no effect. "/reverse" is always appended, matching the public instance's path convention.
+    private readonly string _baseUrl = (configuration[ConfigKeys.Geocoder.Url] is { Length: > 0 } url
+        ? url : DefaultBaseUrl).TrimEnd('/');
+    private readonly string? _language = configuration[ConfigKeys.Geocoder.Language];
     private readonly AddressFormat _addressFormat = new(configuration[ConfigKeys.Geocoder.Format]);
     private readonly int _cacheSize = configuration.GetValue(ConfigKeys.Geocoder.CacheSize, 512);
     private readonly ConcurrentDictionary<string, string?> _cache = new();
@@ -20,7 +25,11 @@ public sealed class NominatimGeocoder(HttpClient httpClient, IConfiguration conf
         if (_cache.TryGetValue(key, out var cached))
             return cached;
 
-        var url = string.Format(UrlTemplate, latitude, longitude);
+        var url = FormattableString.Invariant(
+            $"{_baseUrl}/reverse?format=json&lat={latitude:F6}&lon={longitude:F6}&zoom=18&addressdetails=1");
+        if (!string.IsNullOrEmpty(_language))
+            url += $"&accept-language={Uri.EscapeDataString(_language)}";
+
         var json = await httpClient.GetStringAsync(url, cancellationToken);
 
         var address = ParseAddress(json);

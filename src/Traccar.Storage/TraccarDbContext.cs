@@ -5,6 +5,27 @@ namespace Traccar.Storage;
 
 public class TraccarDbContext(DbContextOptions<TraccarDbContext> options) : DbContext(options)
 {
+    private Action? _onDisposed;
+
+    /// <summary>Set by ThrottledDbContextFactory so releasing this context's connection-pool
+    /// slot happens automatically on Dispose/DisposeAsync, regardless of which one the caller
+    /// uses (both "await using" and plain "using" are common across this codebase).</summary>
+    internal void SetDisposalCallback(Action callback) => _onDisposed = callback;
+
+    public override void Dispose()
+    {
+        var callback = Interlocked.Exchange(ref _onDisposed, null);
+        base.Dispose();
+        callback?.Invoke();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        var callback = Interlocked.Exchange(ref _onDisposed, null);
+        await base.DisposeAsync();
+        callback?.Invoke();
+    }
+
     public DbSet<Device> Devices => Set<Device>();
 
     public DbSet<User> Users => Set<User>();

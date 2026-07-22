@@ -23,8 +23,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
-builder.Services.AddDbContextFactory<TraccarDbContext>(options =>
-    DbProviderExtensions.UseProvider(options, builder.Configuration));
+// The factory is wrapped in ThrottledDbContextFactory (below) rather than registered directly,
+// so every consumer — the protocol pipeline included — shares one app-wide cap on concurrent
+// connections instead of each opening one freely.
+var dbContextOptionsBuilder = new DbContextOptionsBuilder<TraccarDbContext>();
+DbProviderExtensions.UseProvider(dbContextOptionsBuilder, builder.Configuration);
+var dbConcurrencyLimit = DatabaseOptions.Bind(builder.Configuration).MaxConcurrentConnections;
+var dbConnectionSemaphore = new SemaphoreSlim(dbConcurrencyLimit, dbConcurrencyLimit);
+
+builder.Services.AddSingleton<IDbContextFactory<TraccarDbContext>>(
+    new ThrottledDbContextFactory(dbContextOptionsBuilder.Options, dbConnectionSemaphore));
 
 builder.Services.AddScoped<TraccarDbContext>(sp =>
     sp.GetRequiredService<IDbContextFactory<TraccarDbContext>>().CreateDbContext());

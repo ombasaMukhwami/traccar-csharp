@@ -12,6 +12,9 @@ public sealed class EventProcessingHandler(
     IDbContextFactory<TraccarDbContext> dbContextFactory,
     ILogger<EventProcessingHandler> logger) : ChannelHandlerAdapter
 {
+    /// <summary>Deliberately synchronous and called inline (not fire-and-forget) — every caller
+    /// is a DotNetty I/O thread. See ConnectionManager.GetDeviceSession for why awaiting an async
+    /// EF call there doesn't reliably resume.</summary>
     public override void ChannelRead(IChannelHandlerContext context, object message)
     {
         if (message is Position position)
@@ -19,25 +22,25 @@ public sealed class EventProcessingHandler(
             // PositionPersistHandler fires downstream before updating the cache, so GetLastPosition
             // here still returns the previous position — exactly what event handlers need.
             var last = positionCache.GetLastPosition(position.DeviceId);
-            _ = RunHandlersAsync(position, last);
+            RunHandlers(position, last);
         }
         // Terminal handler — no FireChannelRead.
     }
 
-    private async Task RunHandlersAsync(Position position, Position? last)
+    private void RunHandlers(Position position, Position? last)
     {
         var events = new List<Event>();
         foreach (var handler in eventHandlers)
-            await handler.AnalyzeAsync(position, last, events.Add);
+            handler.Analyze(position, last, events.Add);
 
         if (events.Count == 0)
             return;
 
         try
         {
-            await using var db = await dbContextFactory.CreateDbContextAsync();
+            using var db = dbContextFactory.CreateDbContext();
             db.Events.AddRange(events);
-            await db.SaveChangesAsync();
+            db.SaveChanges();
         }
         catch (Exception e)
         {

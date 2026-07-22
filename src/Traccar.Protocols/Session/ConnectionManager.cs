@@ -89,12 +89,18 @@ public sealed class ConnectionManager(
         return session;
     }
 
-    public async Task UpdateDeviceStatusAsync(long deviceId, string status, DateTime? time)
+    /// <summary>
+    /// Deliberately synchronous, for the same reason as GetDeviceSession above. Callers that want
+    /// this off the calling DotNetty thread (it doesn't need to block a channel event) should
+    /// wrap the call in Task.Run, which hands it to a genuine thread-pool thread — safe for a
+    /// blocking call, unlike relying on an awaited Task to resume on DotNetty's own executor.
+    /// </summary>
+    public void UpdateDeviceStatus(long deviceId, string status, DateTime? time)
     {
         try
         {
-            await using var db = await dbContextFactory.CreateDbContextAsync().ConfigureAwait(false);
-            var device = await db.Devices.FindAsync(deviceId).ConfigureAwait(false);
+            using var db = dbContextFactory.CreateDbContext();
+            var device = db.Devices.Find(deviceId);
             if (device == null)
             {
                 return;
@@ -118,7 +124,7 @@ public sealed class ConnectionManager(
                 db.Events.Add(new Event(eventType, deviceId));
             }
 
-            await db.SaveChangesAsync().ConfigureAwait(false);
+            db.SaveChanges();
         }
         catch (Exception e)
         {
@@ -135,7 +141,8 @@ public sealed class ConnectionManager(
         foreach (var session in channelSessions.Values)
         {
             _sessionsByDeviceId.TryRemove(session.DeviceId, out _);
-            _ = UpdateDeviceStatusAsync(session.DeviceId, Device.StatusOffline, null);
+            var deviceId = session.DeviceId;
+            _ = Task.Run(() => UpdateDeviceStatus(deviceId, Device.StatusOffline, null));
         }
     }
 }

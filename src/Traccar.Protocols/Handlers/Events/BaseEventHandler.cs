@@ -5,11 +5,14 @@ namespace Traccar.Protocols.Handlers.Events;
 
 public abstract class BaseEventHandler(ILogger logger)
 {
-    public async ValueTask AnalyzeAsync(Position position, Position? last, Action<Event> callback)
+    /// <summary>Deliberately synchronous — every caller runs on a DotNetty I/O thread as part of
+    /// the position-processing pipeline. See ConnectionManager.GetDeviceSession for why awaiting
+    /// an async EF call there doesn't reliably resume.</summary>
+    public void Analyze(Position position, Position? last, Action<Event> callback)
     {
         try
         {
-            await OnPositionAsync(position, last, callback);
+            OnPosition(position, last, callback);
         }
         catch (Exception e)
         {
@@ -17,5 +20,5 @@ public abstract class BaseEventHandler(ILogger logger)
         }
     }
 
-    protected abstract ValueTask OnPositionAsync(Position position, Position? last, Action<Event> callback);
+    protected abstract void OnPosition(Position position, Position? last, Action<Event> callback);
 }
