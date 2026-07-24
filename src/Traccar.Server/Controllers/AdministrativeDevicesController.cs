@@ -7,15 +7,18 @@ using Traccar.Storage;
 namespace Traccar.Server.Controllers;
 
 /// <summary>
-/// Port of MockApi's AdministrativeEndpoints "Devices" routes — the simplified admin-screen view
-/// of <see cref="Device"/> (see <see cref="AdminDevice"/>), enforcing each client's device limit.
-/// Distinct from <see cref="DevicesController"/>, which manages the full Device entity used by the
-/// protocol-decoding pipeline.
+/// Port of MockApi's AdministrativeEndpoints "Devices" routes, at the exact paths the Blazor
+/// fleet-management frontend's AdminDevicesService calls — distinct from
+/// <see cref="AdminDevicesController"/>'s "api/admin-devices" convention, which nothing in this
+/// frontend actually calls.
+///
+/// Deliberately <see cref="AllowAnonymousAttribute"/> — see
+/// <see cref="AdministrativeClientsController"/>'s doc comment for why.
 /// </summary>
 [ApiController]
-[Authorize]
-[Route("api/admin-devices")]
-public class AdminDevicesController(TraccarDbContext db) : ControllerBase
+[AllowAnonymous]
+[Route("administrative/v1/api/Devices/device")]
+public class AdministrativeDevicesController(TraccarDbContext db) : ControllerBase
 {
     private static AdminDevice ToAdminDevice(Device d) => new()
     {
@@ -28,22 +31,10 @@ public class AdminDevicesController(TraccarDbContext db) : ControllerBase
         SerialNo = d.SerialNo,
     };
 
-    [HttpGet]
-    public async Task<ActionResult<List<AdminDevice>>> Get([FromQuery] int clientId)
-    {
-        var devices = await db.Devices.Where(d => d.ClientId == clientId).OrderBy(d => d.Id).ToListAsync();
-        return devices.Select(ToAdminDevice).ToList();
-    }
-
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<AdminDevice>> GetById(long id)
-    {
-        var device = await db.Devices.FindAsync(id);
-        return device == null ? NotFound() : ToAdminDevice(device);
-    }
-
-    [HttpGet("models")]
-    public ActionResult<IReadOnlyList<DeviceModelInfo>> GetModels() => Ok(DeviceModelInfo.Catalog);
+    [HttpGet("{clientId:int}")]
+    public async Task<ActionResult<List<AdminDevice>>> Get(int clientId) =>
+        (await db.Devices.Where(d => d.ClientId == clientId).OrderBy(d => d.Id).ToListAsync())
+            .Select(ToAdminDevice).ToList();
 
     [HttpPost]
     public async Task<ActionResult<AdminDevice>> Create(AdminDevice device)
@@ -69,7 +60,7 @@ public class AdminDevicesController(TraccarDbContext db) : ControllerBase
         };
         db.Devices.Add(newDevice);
         await db.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new { id = newDevice.Id }, ToAdminDevice(newDevice));
+        return ToAdminDevice(newDevice);
     }
 
     [HttpPut("{id:long}")]
@@ -94,35 +85,47 @@ public class AdminDevicesController(TraccarDbContext db) : ControllerBase
     public async Task<IActionResult> Delete(long id)
     {
         var device = await db.Devices.FindAsync(id);
-        if (device == null)
+        if (device != null)
         {
-            return NotFound();
+            db.Devices.Remove(device);
+            await db.SaveChangesAsync();
         }
-        db.Devices.Remove(device);
-        await db.SaveChangesAsync();
-        return NoContent();
+        return Ok();
     }
+}
 
-    [HttpPost("move")]
-    public async Task<IActionResult> Move(MoveDevicesRequest request)
+/// <summary>
+/// Port of MockApi's device-model catalog and cross-client "move" routes — standalone (not
+/// clients/device-scoped), so kept out of <see cref="AdministrativeDevicesController"/> proper.
+/// </summary>
+[ApiController]
+[AllowAnonymous]
+public class AdministrativeDeviceUtilitiesController(TraccarDbContext db) : ControllerBase
+{
+    [HttpGet("administrative/api/uploads/models")]
+    public ActionResult<IReadOnlyList<DeviceModelInfo>> GetModels() => Ok(DeviceModelInfo.Catalog);
+
+    [HttpPost("administrative/v1/api/move/assets")]
+    public async Task<IActionResult> Move(AdministrativeMoveRequest request)
     {
-        var uniqueIds = request.UniqueIds.ToHashSet();
+        var identifiers = request.ToMove.Where(m => m.Checked)
+            .Select(m => m.Identifier.ToString())
+            .ToHashSet();
 
         var client = await db.Clients.FindAsync(request.ToClientId);
         if (client != null)
         {
-            // Devices already on the destination client that are ALSO in this move (re-moving
-            // the same device to where it already is) shouldn't be double-counted.
-            var currentCount = await db.Devices.CountAsync(d => d.ClientId == request.ToClientId && !uniqueIds.Contains(d.UniqueId));
-            if (currentCount + uniqueIds.Count > client.DeviceLimit)
+            var currentCount = await db.Devices.CountAsync(
+                d => d.ClientId == request.ToClientId && !identifiers.Contains(d.UniqueId));
+            if (currentCount + identifiers.Count > client.DeviceLimit)
             {
-                return Conflict($"\"{client.Name}\" has reached its device limit ({client.DeviceLimit}) — cannot move {uniqueIds.Count} device(s) onto it.");
+                return Conflict($"\"{client.Name}\" has reached its device limit ({client.DeviceLimit}) — cannot move {identifiers.Count} device(s) onto it.");
             }
         }
 
         await db.Devices
-            .Where(d => uniqueIds.Contains(d.UniqueId))
+            .Where(d => identifiers.Contains(d.UniqueId))
             .ExecuteUpdateAsync(setters => setters.SetProperty(d => d.ClientId, request.ToClientId));
-        return NoContent();
+        return Ok();
     }
 }

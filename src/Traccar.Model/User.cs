@@ -28,16 +28,37 @@ public class User : ExtendedModel
 
     public DateTime? ExpirationTime { get; set; }
 
-    /// <summary>Owning client/reseller tenant. Non-administrators are scoped to devices with a
-    /// matching Device.ClientId (see ReportUtils.GetAccessibleDevicesAsync); null/0 means
-    /// unassigned and sees no devices.</summary>
-    public int? ClientId { get; set; }
+    /// <summary>Clients this user is assigned to — a user can work across several (e.g. a
+    /// dispatcher managing multiple fleets), matching the Blazor fleet-management frontend's
+    /// multi-select AppUser.ClientId. Non-administrators are scoped to devices whose
+    /// Device.ClientId is in this list (see ReportUtils.GetAccessibleDevicesAsync); null/empty
+    /// means unassigned and sees no devices. JwtIssuer emits one "client_id" JWT claim per entry
+    /// — the frontend's ClientAccessClaims reads them back the same way.</summary>
+    public List<int>? ClientId { get; set; }
 
     /// <summary>Reseller tenant that manages this user — distinct from <see cref="ClientId"/>,
     /// the client this user belongs to.</summary>
     public int? ResellerId { get; set; }
 
     public List<RouteAccessGrant>? RouteAccess { get; set; }
+
+    /// <summary>See <see cref="Model.UserType"/>'s own doc comment.</summary>
+    public UserType UserType { get; set; } = Model.UserType.User;
+
+    /// <summary>The <see cref="RouteAccess"/> a newly created user of this <paramref name="userType"/>
+    /// starts with — full access for <see cref="Model.UserType.Administrator"/>, everything except
+    /// "admin/database" and "admin/resellers" for <see cref="Model.UserType.User"/>.</summary>
+    public static List<RouteAccessGrant> DefaultRouteAccess(UserType userType) => RouteInfo.Catalog
+        .Where(r => userType == Model.UserType.Administrator || r.Path is not ("admin/database" or "admin/resellers"))
+        .Select(r => new RouteAccessGrant
+        {
+            Path = r.Path,
+            CanView = true,
+            CanAdd = r.SupportsAdd,
+            CanEdit = r.SupportsEdit,
+            CanDelete = r.SupportsDelete,
+        })
+        .ToList();
 
     /// <summary>Transient password-change fields — never persisted (see
     /// TraccarDbContext.OnModelCreating, which ignores them for the User entity).</summary>

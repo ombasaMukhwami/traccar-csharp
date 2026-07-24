@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Traccar.Storage;
@@ -11,9 +12,11 @@ using Traccar.Storage;
 namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
 {
     [DbContext(typeof(TraccarDbContext))]
-    partial class TraccarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724093604_EnforceDeviceRelationships")]
+    partial class EnforceDeviceRelationships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1107,8 +1110,8 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .HasColumnType("text")
                         .HasColumnName("attributes");
 
-                    b.Property<string>("ClientId")
-                        .HasColumnType("text")
+                    b.Property<int?>("ClientId")
+                        .HasColumnType("integer")
                         .HasColumnName("client_id");
 
                     b.Property<bool>("Disabled")
@@ -1155,11 +1158,6 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                     b.Property<string>("Salt")
                         .HasColumnType("text")
                         .HasColumnName("salt");
-
-                    b.Property<string>("UserType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("user_type");
 
                     b.HasKey("Id")
                         .HasName("pk_users");

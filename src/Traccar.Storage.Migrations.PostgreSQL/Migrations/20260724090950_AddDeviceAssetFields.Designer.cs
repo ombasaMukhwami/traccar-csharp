@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Traccar.Storage;
@@ -11,9 +12,11 @@ using Traccar.Storage;
 namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
 {
     [DbContext(typeof(TraccarDbContext))]
-    partial class TraccarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724090950_AddDeviceAssetFields")]
+    partial class AddDeviceAssetFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -128,6 +131,7 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .HasColumnName("secondary_color");
 
                     b.Property<string>("TimeZone")
+                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("time_zone");
 
@@ -271,6 +275,10 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .HasColumnType("text")
                         .HasColumnName("status");
 
+                    b.Property<string>("Tag")
+                        .HasColumnType("text")
+                        .HasColumnName("tag");
+
                     b.Property<int>("TrackingObject")
                         .HasColumnType("integer")
                         .HasColumnName("tracking_object");
@@ -286,12 +294,6 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_devices");
-
-                    b.HasIndex("ClientId")
-                        .HasDatabaseName("ix_devices_client_id");
-
-                    b.HasIndex("PositionId")
-                        .HasDatabaseName("ix_devices_position_id");
 
                     b.HasIndex("UniqueId")
                         .IsUnique()
@@ -880,9 +882,6 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_refresh_tokens_token");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_refresh_tokens_user_id");
-
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
@@ -1107,8 +1106,8 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .HasColumnType("text")
                         .HasColumnName("attributes");
 
-                    b.Property<string>("ClientId")
-                        .HasColumnType("text")
+                    b.Property<int?>("ClientId")
+                        .HasColumnType("integer")
                         .HasColumnName("client_id");
 
                     b.Property<bool>("Disabled")
@@ -1156,11 +1155,6 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .HasColumnType("text")
                         .HasColumnName("salt");
 
-                    b.Property<string>("UserType")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("user_type");
-
                     b.HasKey("Id")
                         .HasName("pk_users");
 
@@ -1169,72 +1163,6 @@ namespace Traccar.Storage.Migrations.PostgreSQL.Migrations
                         .HasDatabaseName("ix_users_email");
 
                     b.ToTable("users", (string)null);
-                });
-
-            modelBuilder.Entity("Traccar.Model.Command", b =>
-                {
-                    b.HasOne("Traccar.Model.Device", null)
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_commands_devices_device_id");
-                });
-
-            modelBuilder.Entity("Traccar.Model.Device", b =>
-                {
-                    b.HasOne("Traccar.Model.Client", null)
-                        .WithMany()
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_devices_clients_client_id");
-
-                    b.HasOne("Traccar.Model.Position", null)
-                        .WithMany()
-                        .HasForeignKey("PositionId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_devices_positions_position_id");
-                });
-
-            modelBuilder.Entity("Traccar.Model.DeviceAttribute", b =>
-                {
-                    b.HasOne("Traccar.Model.Device", null)
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_device_attributes_devices_device_id");
-                });
-
-            modelBuilder.Entity("Traccar.Model.Event", b =>
-                {
-                    b.HasOne("Traccar.Model.Device", null)
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_events_devices_device_id");
-                });
-
-            modelBuilder.Entity("Traccar.Model.Position", b =>
-                {
-                    b.HasOne("Traccar.Model.Device", null)
-                        .WithMany()
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_positions_devices_device_id");
-                });
-
-            modelBuilder.Entity("Traccar.Model.RefreshToken", b =>
-                {
-                    b.HasOne("Traccar.Model.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_refresh_tokens_users_user_id");
                 });
 #pragma warning restore 612, 618
         }

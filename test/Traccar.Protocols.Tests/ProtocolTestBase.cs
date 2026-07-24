@@ -28,6 +28,14 @@ public abstract class ProtocolTestBase
             .UseSnakeCaseNamingConvention()
             .Options;
         dbContextFactory = new TestDbContextFactory(options);
+
+        // ConnectionManager.GetDeviceSession auto-registers unknown devices under the default
+        // client (every device now requires one — see TraccarDbContext's FK on Device.ClientId)
+        // — without this, every test that decodes a frame for a not-yet-seeded device (i.e. most
+        // of them; SeedDevice is the exception, not the rule) would have its connection rejected.
+        using var db = dbContextFactory.CreateDbContext();
+        db.Clients.Add(new Client { Id = 1, Name = "Test Client", IsDefault = true });
+        db.SaveChanges();
     }
 
     protected IDbContextFactory<TraccarDbContext> DbContextFactory => dbContextFactory;
@@ -40,7 +48,7 @@ public abstract class ProtocolTestBase
     protected long SeedDevice(string uniqueId, string? model = null)
     {
         using var db = dbContextFactory.CreateDbContext();
-        var device = new Device { Name = uniqueId, UniqueId = uniqueId, Model = model };
+        var device = new Device { Name = uniqueId, UniqueId = uniqueId, Model = model, ClientId = 1 };
         db.Devices.Add(device);
         db.SaveChanges();
         return device.Id;

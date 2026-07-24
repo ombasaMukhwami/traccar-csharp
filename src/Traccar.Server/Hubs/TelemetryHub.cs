@@ -9,8 +9,8 @@ namespace Traccar.Server.Hubs;
 /// <summary>
 /// Live position feed for authenticated web clients (e.g. the Blazor fleet-management frontend).
 /// [Authorize] rejects the connection handshake itself for anyone without a valid cookie or JWT,
-/// so only logged-in users ever hold a connection. On connect, each client joins a group scoped to
-/// their own <see cref="Model.User.ClientId"/> — administrators join <see cref="AdministratorsGroup"/>
+/// so only logged-in users ever hold a connection. On connect, each client joins one group per
+/// <see cref="Model.User.ClientId"/> entry — administrators join <see cref="AdministratorsGroup"/>
 /// instead and see every device, mirroring how ReportUtils already bypasses ClientId filtering for
 /// them. See <see cref="Forward.TelemetryHubPositionForwarder"/> for what gets broadcast to these
 /// groups.
@@ -32,12 +32,17 @@ public class TelemetryHub(TraccarDbContext db) : Hub
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId, AdministratorsGroup);
             }
-            else if (user?.ClientId is > 0)
+            else
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, ClientGroup(user.ClientId.Value));
+                // One group per assigned client — a user working across several clients (see
+                // User.ClientId) sees live updates for all of them. No ClientId and not an
+                // administrator: connection stays in no group, matching ReportUtils'
+                // "unassigned users see no devices" convention.
+                foreach (var clientId in user?.ClientId ?? [])
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, ClientGroup(clientId));
+                }
             }
-            // No ClientId and not an administrator: connection stays in no group — matches
-            // ReportUtils' "unassigned users see no devices" convention.
         }
 
         await base.OnConnectedAsync();

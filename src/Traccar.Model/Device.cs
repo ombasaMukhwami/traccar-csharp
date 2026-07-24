@@ -41,4 +41,34 @@ public class Device : ExtendedModel
     public DateTime? ExpirationTime { get; set; }
     public int ClientId { get; set; }
     public string? SerialNo { get; set; }
+
+    // --- Asset fields (administrative/v1/api/Assets/asset) ---
+    // This model folds the fleet-management frontend's separate Device+Asset entities into one
+    // row (Name already doubles as AssetName above), so these live directly on Device rather
+    // than a distinct Asset table.
+
+    /// <summary>One of the frontend's fixed TrackingObjects catalog (1=Car, 2=Bus, ...).</summary>
+    public int TrackingObject { get; set; } = 1;
+
+    public string? OwnerContact { get; set; }
+
+    /// <summary>Vehicle/asset model — distinct from <see cref="Model"/>, which is the tracker
+    /// hardware model.</summary>
+    public string? VehicleModel { get; set; }
+
+    public string? Make { get; set; }
+    public string? Color { get; set; }
+    public string? ChasisNo { get; set; }
+    public string? OwnerName { get; set; }
+    public string? OwnerId { get; set; }
+
+    /// <summary>References <see cref="AgentDetails.Id"/>.</summary>
+    public int? Agent { get; set; }
+
+    public string? AssetCertificateNo { get; set; }
+
+    /// <summary>True once the asset has been explicitly unassigned from this device (see
+    /// AssetsController's Delete) — a disassociated device keeps its Name cleared but the row
+    /// itself isn't removed.</summary>
+    public bool IsDisAssociated { get; set; }
 }

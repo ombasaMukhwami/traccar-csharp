@@ -64,7 +64,13 @@ public static class DatabaseSeeder
                 // seeded above, so /auth/login (which requires both) works out of the box — the
                 // Administrator flag already bypasses ClientId-based filtering everywhere else.
                 ResellerId = 1,
-                ClientId = 11,
+                ClientId = [11],
+                UserType = UserType.Administrator,
+                // Full access on every route in the catalog — without this, JwtIssuer emits no
+                // "route_access" claims at all, and the frontend's RouteAccessClaims (which grants
+                // nothing by default, Administrator or not — see its own doc comment) hides every
+                // page and disables every button even for this seeded admin.
+                RouteAccess = User.DefaultRouteAccess(UserType.Administrator),
             };
             admin.SetPassword(password);
             db.Users.Add(admin);
@@ -72,6 +78,31 @@ public static class DatabaseSeeder
 
             logger.LogWarning("Seeded default admin user — email: {Email}, password: {Password}. Change this immediately.",
                 email, password);
+        }
+        else
+        {
+            // Backfills RouteAccess (and UserType) for administrators seeded before either was
+            // added above (or any other admin account that ended up with none) — otherwise
+            // they'd get zero "route_access" claims and see a blank UI despite Administrator
+            // being set.
+            var unseededAdmins = db.Users
+                .Where(u => u.Administrator)
+                .AsEnumerable()
+                .Where(u => u.RouteAccess is null or { Count: 0 } || u.UserType != UserType.Administrator)
+                .ToList();
+
+            if (unseededAdmins.Count > 0)
+            {
+                foreach (var user in unseededAdmins)
+                {
+                    user.UserType = UserType.Administrator;
+                    if (user.RouteAccess is null or { Count: 0 })
+                    {
+                        user.RouteAccess = User.DefaultRouteAccess(UserType.Administrator);
+                    }
+                }
+                db.SaveChanges();
+            }
         }
     }
 }

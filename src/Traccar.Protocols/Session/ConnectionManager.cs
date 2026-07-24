@@ -59,12 +59,24 @@ public sealed class ConnectionManager(
 
         if (device == null)
         {
-            // No device-provisioning UI/API exists yet in this build, so unknown devices are
-            // auto-registered on first contact rather than silently dropped.
-            device = new Device { Name = ids[0], UniqueId = ids[0] };
+            // Unknown devices are still auto-registered on first contact (matching original
+            // Traccar) rather than rejected — but every device now requires a real ClientId (see
+            // TraccarDbContext's FK on Device.ClientId), so this assigns the table-wide default
+            // client (Client.IsDefault — see AdministrativeClientsController.MarkDefault) instead
+            // of leaving it unset. If no default client exists yet, there's truly nothing valid
+            // to assign, so the connection is rejected rather than violating the FK.
+            var defaultClientId = db.Clients.Where(c => c.IsDefault).Select(c => (int?)c.Id).FirstOrDefault();
+            if (defaultClientId == null)
+            {
+                logger.LogWarning("Rejected connection from unknown device {UniqueId} at {RemoteAddress} — " +
+                    "no default client configured to auto-assign it to.", ids[0], remoteAddress);
+                return null;
+            }
+
+            device = new Device { Name = ids[0], UniqueId = ids[0], ClientId = defaultClientId.Value };
             db.Devices.Add(device);
             db.SaveChanges();
-            logger.LogInformation("Automatically registered {UniqueId}", ids[0]);
+            logger.LogInformation("Automatically registered {UniqueId} under default client {ClientId}", ids[0], defaultClientId);
         }
 
         if (_sessionsByDeviceId.TryRemove(device.Id, out var oldSession)

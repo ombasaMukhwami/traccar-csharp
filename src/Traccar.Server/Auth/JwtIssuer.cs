@@ -32,10 +32,9 @@ public class JwtIssuer(JwtOptions options, SymmetricSecurityKey signingKey)
             claims.Add(new Claim(ClaimTypes.Role, ConfigKeys.Auth.RoleAdministrator));
         }
 
-        if (user.ClientId is > 0)
-        {
-            claims.Add(new Claim("client_id", user.ClientId.Value.ToString()));
-        }
+        // One "client_id" claim per assigned client — the frontend's ClientAccessClaims collects
+        // them all back into a set, not just the first.
+        claims.AddRange((user.ClientId ?? []).Select(id => new Claim("client_id", id.ToString())));
 
         // One claim per View-granted route only — a route without View is unreachable regardless
         // of its other flags. Format: "{path}:V{A}{E}{D}", e.g. "admin/users:VAED", "map:V".

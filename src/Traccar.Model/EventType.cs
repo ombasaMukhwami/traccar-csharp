@@ -50,4 +50,7 @@ public sealed class EventType
 
     public static EventType? FromName(string name) =>
         All.FirstOrDefault(e => e.Name == name);
+
+    public static EventType? FromId(int id) =>
+        All.FirstOrDefault(e => e.Id == id);
 }

@@ -60,7 +60,7 @@ public sealed class ReportUtils(TraccarDbContext db, IConfiguration configuratio
 
     // -------------------------------------------------------------------------
     // Accessible-device resolution — scoped by Device.ClientId against the caller's own
-    // User.ClientId (administrators see every device, matching the pre-existing convention
+    // User.ClientId list (administrators see every device, matching the pre-existing convention
     // elsewhere that admins bypass ownership checks).
     // -------------------------------------------------------------------------
 
@@ -72,8 +72,8 @@ public sealed class ReportUtils(TraccarDbContext db, IConfiguration configuratio
             return db.Devices;
         }
 
-        var clientId = user?.ClientId ?? 0;
-        return db.Devices.Where(d => d.ClientId == clientId);
+        var clientIds = user?.ClientId ?? [];
+        return db.Devices.Where(d => clientIds.Contains(d.ClientId));
     }
 
     public async Task<List<Device>> GetAccessibleDevicesAsync(long userId, IList<long> deviceIds)

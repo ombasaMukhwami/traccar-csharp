@@ -14,7 +14,7 @@ public class AdminDevice
     public string UniqueId { get; set; } = string.Empty;
 
     /// <summary>Maps to <see cref="Device.Model"/> (tracker hardware model).</summary>
-    public string? DeviceModel { get; set; }
+    public string? Model { get; set; }
 
     /// <summary>Maps to <see cref="Device.Phone"/>.</summary>
     public string? GsmNumber { get; set; }

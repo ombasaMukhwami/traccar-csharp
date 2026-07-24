@@ -38,8 +38,11 @@ public class Client
     /// reassigning devices onto it.</summary>
     public int DeviceLimit { get; set; } = 110;
 
-    /// <summary>IANA/system time zone id (e.g. "Africa/Nairobi").</summary>
-    public string TimeZone { get; set; } ="Africa/Nairobi";
+    /// <summary>IANA/system time zone id (e.g. "Africa/Nairobi"). Nullable to match the Blazor
+    /// fleet-management frontend's own Client DTO, which sends null when unset — a non-nullable
+    /// string here trips ASP.NET Core's implicit-required model validation on every edit that
+    /// doesn't touch this field (i.e. almost all of them).</summary>
+    public string? TimeZone { get; set; } = "Africa/Nairobi";
 
     /// <summary>Default coordinates for this client's devices — used as a new device's starting
     /// position when it hasn't reported one yet.</summary>

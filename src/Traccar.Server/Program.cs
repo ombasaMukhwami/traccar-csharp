@@ -17,7 +17,10 @@ using Traccar.Server.Hubs;
 using Traccar.Server.Reports;
 using Traccar.Storage;
 
-const string TelemetryHubPath = "/hubs/telemetry";
+// "/notify" (not e.g. "/hubs/telemetry") to match the Blazor fleet-management frontend's default
+// SignalR:HubUrl dev config ("http://localhost:5100/notify") — its original backend, MockApi,
+// mounted its hub at this same path.
+const string TelemetryHubPath = "/notify";
 
 var builder = WebApplication.CreateBuilder(args);
 
