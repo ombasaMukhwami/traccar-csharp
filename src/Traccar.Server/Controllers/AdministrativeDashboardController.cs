@@ -37,4 +37,54 @@ public class AdministrativeDashboardController(TraccarDbContext db) : Controller
         }
         return result;
     }
+
+    /// <summary>Port of MockApi's "Dashboard/recent-alerts" route. There is no separate
+    /// user-defined "Alert" backend yet, so this surfaces the real <see cref="Event.TypeAlarm"/>
+    /// rows the protocol pipeline already records — the same data the Reports/Events pages use —
+    /// rather than a synthetic feed.</summary>
+    [HttpGet("recent-alerts")]
+    public async Task<ActionResult<List<DashboardAlertNotification>>> GetRecentAlerts(
+        [FromQuery] int? resellerId, [FromQuery] int take = 8)
+    {
+        var deviceIds = await (resellerId is > 0
+                ? db.Devices.Where(d => db.Clients.Any(c => c.Id == d.ClientId && c.ParentId == resellerId))
+                : db.Devices)
+            .Select(d => d.Id)
+            .ToListAsync();
+
+        var events = await db.Events
+            .Where(e => e.Type == Event.TypeAlarm && deviceIds.Contains(e.DeviceId))
+            .OrderByDescending(e => e.EventTime)
+            .Take(take)
+            .ToListAsync();
+
+        var deviceNames = await db.Devices
+            .Where(d => deviceIds.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, d => d.Name);
+
+        var positionIds = events.Select(e => e.PositionId).Distinct().ToList();
+        var positions = await db.Positions
+            .Where(p => positionIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Address);
+
+        return events.Select(e =>
+        {
+            var alarm = e.GetString(Position.KeyAlarm);
+            deviceNames.TryGetValue(e.DeviceId, out var deviceName);
+            positions.TryGetValue(e.PositionId, out var address);
+            return new DashboardAlertNotification
+            {
+                AlertName = alarm is null ? "Alert" : HumanizeAlarmName(alarm),
+                AssetName = deviceName,
+                AlertTime = e.EventTime ?? DateTime.UtcNow,
+                LocationText = address,
+            };
+        }).ToList();
+    }
+
+    private static string HumanizeAlarmName(string alarm)
+    {
+        var spaced = System.Text.RegularExpressions.Regex.Replace(alarm, "(?<!^)([A-Z])", " $1");
+        return char.ToUpperInvariant(spaced[0]) + spaced[1..];
+    }
 }

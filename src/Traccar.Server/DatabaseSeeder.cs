@@ -30,7 +30,7 @@ public static class DatabaseSeeder
             // Roots (ParentId null) are resellers; rows with ParentId are their clients.
             db.Clients.AddRange(
             [
-                new Client { Id = 1, Name = "Kabrasoft Kenya", Url = "kabrasoft.co.ke", Email = "ops@kabrasoft.co.ke", Address = "Nairobi, Kenya", PhoneNumber = "+254700000001", PrimaryColor = "#3aa335", SecondaryColor = "#8dd489", MapProvider = "GOOGLE" },
+                new Client { Id = 1, Name = "Kabrasoft Kenya", Url = "kabrasoft.co.ke", Email = "ops@kabrasoft.co.ke", Address = "Nairobi, Kenya", PhoneNumber = "+254700000001", PrimaryColor = "#30b14b", SecondaryColor = "#243b30", MapProvider = "GOOGLE" },
                 new Client { Id = 2, Name = "Kabrasoft Tanzania", Url = "kabrasoft.co.tz", Email = "ops@kabrasoft.co.tz", Address = "Dar es Salaam, Tanzania", PhoneNumber = "+255700000002", PrimaryColor = "#1976d2", SecondaryColor = "#455a64", MapProvider = "OPEN_STREET" },
                 new Client { Id = 11, Name = "Acme Logistics", Url = "acme.example.com", Email = "fleet@acme.example.com", Address = "Industrial Area, Nairobi", PhoneNumber = "+254700100001", ParentId = 1, IsDefault = true },
                 new Client { Id = 12, Name = "Metro Cabs", Url = "metrocabs.example.com", Email = "ops@metrocabs.example.com", Address = "Westlands, Nairobi", PhoneNumber = "+254700100002", ParentId = 1 },

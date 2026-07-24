@@ -8,6 +8,7 @@ using Traccar.Protocols.Handlers;
 using Traccar.Protocols.Handlers.Events;
 using Traccar.Protocols.Session;
 using Traccar.Storage;
+using Traccar.Model;
 
 namespace Traccar.Protocols;
 
@@ -146,15 +147,27 @@ public abstract class BaseProtocol : IProtocol
                 configurePipeline(pipeline);
                 pipeline.AddLast(new PositionProcessingHandler(
                     positionCache, outdated, computedEarly, copyAttrs, distance, engineHours, motion, computedLate, filter, attributes));
-                if (geocoder != null)
-                    pipeline.AddLast(new GeocoderHandler(geocoder, positionCache, config,
-                        logFactory.CreateLogger<GeocoderHandler>()));
-                pipeline.AddLast(new PositionForwardingHandler(forwarder, dbFactory, config,
-                    logFactory.CreateLogger<PositionForwardingHandler>()));
-                pipeline.AddLast(new PositionPersistHandler(dbFactory, positionCache,
-                    logFactory.CreateLogger<PositionPersistHandler>()));
-                pipeline.AddLast(new EventProcessingHandler(eventHandlers, positionCache, dbFactory,
-                    logFactory.CreateLogger<EventProcessingHandler>()));
+
+                var forwardingHandler = new PositionForwardingHandler(forwarder, dbFactory, config,
+                    logFactory.CreateLogger<PositionForwardingHandler>());
+                var persistHandler = new PositionPersistHandler(dbFactory, positionCache,
+                    logFactory.CreateLogger<PositionPersistHandler>());
+                var eventProcessor = new EventProcessingHandler(eventHandlers, positionCache, dbFactory,
+                    logFactory.CreateLogger<EventProcessingHandler>());
+
+                // forward -> persist -> analyze-events, invoked as plain delegate calls rather
+                // than further pipeline stages, since GeocoderHandler needs to be able to resume
+                // this segment from a background thread pool thread after its async lookup — see
+                // GeocoderHandler's own doc comment for why that rules out further
+                // context.FireChannelRead-based stages.
+                void ContinuePosition(Position position)
+                {
+                    forwardingHandler.Process(position);
+                    persistHandler.Process(position, eventProcessor.Process);
+                }
+
+                pipeline.AddLast(new GeocoderHandler(geocoder, positionCache, config,
+                    logFactory.CreateLogger<GeocoderHandler>(), ContinuePosition));
             },
             _loggerFactory.CreateLogger<ProtocolServer>()));
     }

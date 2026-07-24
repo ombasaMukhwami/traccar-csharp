@@ -1,5 +1,4 @@
 using System.Threading;
-using DotNetty.Transport.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -9,10 +8,17 @@ using Traccar.Storage;
 
 namespace Traccar.Protocols;
 
-/// <summary>Mirrors Java's handler.PositionForwardingHandler, including its retry/backoff behavior.</summary>
+/// <summary>
+/// Mirrors Java's handler.PositionForwardingHandler, including its retry/backoff behavior.
+///
+/// A plain class rather than a DotNetty pipeline handler — see BaseProtocol.AddPositionServer's
+/// ContinuePosition, which calls <see cref="Process"/> directly. That keeps forwarding independent
+/// of the producing channel's lifecycle (see GeocoderHandler's doc comment for why that matters),
+/// though this handler was already safe on that front since it never waits for Forward to finish.
+/// </summary>
 public sealed class PositionForwardingHandler(
     IPositionForwarder? positionForwarder, IDbContextFactory<TraccarDbContext> dbContextFactory,
-    IConfiguration configuration, ILogger<PositionForwardingHandler> logger) : ChannelHandlerAdapter
+    IConfiguration configuration, ILogger<PositionForwardingHandler> logger)
 {
     private readonly bool _retryEnabled = configuration.GetValue(ConfigKeys.Forward.Retry.Enable, false);
     private readonly int _retryDelay = configuration.GetValue(ConfigKeys.Forward.Retry.Delay, 100);
@@ -21,17 +27,17 @@ public sealed class PositionForwardingHandler(
 
     private int _deliveryPending;
 
-    public override void ChannelRead(IChannelHandlerContext context, object message)
+    public void Process(Position position)
     {
-        if (positionForwarder != null && message is Position position)
+        if (positionForwarder != null)
         {
-            // Runs off the calling DotNetty thread via Task.Run (a genuine thread-pool thread,
-            // safe to block) rather than awaiting an async EF call inline — DotNetty's
-            // SingleThreadEventExecutor doesn't reliably resume continuations posted from its own
-            // thread. See ConnectionManager.GetDeviceSession for the same issue in more detail.
+            // Runs off the calling thread via Task.Run (a genuine thread-pool thread, safe to
+            // block) rather than awaiting an async EF call inline — see
+            // ConnectionManager.GetDeviceSession for why. Doesn't wait for the result, so unlike
+            // GeocoderHandler this was never vulnerable to losing positions if the connection
+            // that produced them closes first.
             _ = Task.Run(() => Forward(position));
         }
-        context.FireChannelRead(message);
     }
 
     private void Forward(Position position)

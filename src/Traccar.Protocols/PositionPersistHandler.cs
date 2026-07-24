@@ -1,4 +1,3 @@
-using DotNetty.Transport.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Traccar.Model;
@@ -6,33 +5,19 @@ using Traccar.Storage;
 
 namespace Traccar.Protocols;
 
+/// <summary>
+/// A plain class rather than a DotNetty pipeline handler — see BaseProtocol.AddPositionServer's
+/// ContinuePosition, which calls <see cref="Process"/> directly. Persistence has to stay independent
+/// of the producing channel's lifecycle: it can run from a background thread pool thread after
+/// GeocoderHandler's async lookup completes, well after that channel may have closed (see
+/// GeocoderHandler's own doc comment for the incident this fixes).
+/// </summary>
 public sealed class PositionPersistHandler(
     IDbContextFactory<TraccarDbContext> dbContextFactory,
     PositionCache positionCache,
-    ILogger<PositionPersistHandler> logger) : ChannelHandlerAdapter
+    ILogger<PositionPersistHandler> logger)
 {
-    /// <summary>
-    /// Deliberately synchronous, and called directly rather than fire-and-forget — every caller
-    /// is a DotNetty I/O thread, and blocking on an async Task there doesn't reliably resume
-    /// (DotNetty's SingleThreadEventExecutor doesn't service posted continuations the way a
-    /// normal SynchronizationContext does; see ConnectionManager.GetDeviceSession for the same
-    /// issue on the equivalent connection-handling path). Running inline also fixes an ordering
-    /// bug the previous fire-and-forget version had: multiple positions for the same device
-    /// arriving in quick succession could race on updating Device.PositionId.
-    /// </summary>
-    public override void ChannelRead(IChannelHandlerContext context, object message)
-    {
-        if (message is Position position)
-        {
-            Save(context, position);
-        }
-        else
-        {
-            context.FireChannelRead(message);
-        }
-    }
-
-    private void Save(IChannelHandlerContext context, Position position)
+    public void Process(Position position, Action<Position> onSaved)
     {
         try
         {
@@ -57,9 +42,9 @@ public sealed class PositionPersistHandler(
                 }
             }
 
-            // Fire downstream while the cache still holds the previous position so that
+            // Continue while the cache still holds the previous position so that
             // EventProcessingHandler sees the old last for duplicate-alarm / proximity checks.
-            context.FireChannelRead(position);
+            onSaved(position);
 
             if (isLatest)
                 positionCache.UpdatePosition(position);
